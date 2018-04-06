@@ -1,0 +1,11 @@
+# exclude everything
+src/__pycache__/*
+src/600data_generator/*
+src/documents/*
+src/output/*
+src/output_600data/*
+
+# exception to the rule
+!src/documents/.gitkeep
+!src/output/.gitkeep
+!src/output_600data/.gitkeep

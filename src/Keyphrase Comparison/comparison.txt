@@ -1,0 +1,110 @@
+Cluster10
+TPR :
+[u'logic design techniques', u'combinational logic implementation', u'solid logic technology', u'logic packaging techniques', u'asynchronous logic']
+TextRank Prunned + FPM (w2v) :
+['high performance', 'high speed', 'speed independent', 'asynchronous modules', 'switch block']
+TextRank Prunned + FPM (cooccurence) :
+['power consumption', 'hardware logic', 'idct processor', 'processor family', 'reconfigurable hardware']
+TextRank Full + FPM (cooccurence) :
+['high speed', 'hardware logic', 'low power', 'high performance', 'dynamic logic']
+
+Cluster11
+TPR :
+[u'fuzzy logic circuits', u'computer-aided logic design', u'logic design technique', u'logic design', u'arithmetic logic circuits']
+TextRank Prunned + FPM (w2v) :
+['random logic', 'fuzzy logic', 'logic design', 'logic portion', 'valued logic']
+TextRank Prunned + FPM (cooccurence) :
+['logic design', 'logic portion', 'random logic', 'random logic portion', 'layout system']
+TextRank Full + FPM (cooccurence) :
+['logic design', 'lsi chip', 'fuzzy logic', 'logic portion', 'layout system']
+
+Cluster8
+TPR :
+[u'system software', u'operating system design', u'computer-aided design system', u'system design guide', u'system requirements engineering']
+TextRank Prunned + FPM (w2v) :
+['program examples', 'critical systems', 'critical programs', 'distributed programs', 'system requirements']
+TextRank Prunned + FPM (cooccurence) :
+['systems development', 'software systems', 'operating system', 'operating systems', 'critical systems']
+TextRank Full + FPM (cooccurence) :
+['software systems', 'systems development', 'software engineering', 'distributed programs', 'operating system']
+
+Cluster9
+TPR :
+[u'new error analysis', u'data analysis', u'computer analysis', u'error analysis techniques', u'scene analysis process']
+TextRank Prunned + FPM (w2v) :
+['mode methods', 'three dimensional', 'data types', 'information flow', 'recognition rate']
+TextRank Prunned + FPM (cooccurence) :
+['mode methods', 'information flow', 'section reconstruction', 'decision based', 'solid models']
+TextRank Full + FPM (cooccurence) :
+['information flow', 'machine learning', 'decision based', 'three dimensional', 'data types']
+
+Cluster2
+TPR :
+[u'virtual interconnection networks', u'arbitrary interconnection networks', u'multistage interconnection networks', u'fault-tolerant interconnection network', u'multiprocessor interconnection networks']
+TextRank Prunned + FPM (w2v) :
+['fault information', 'time complexity', 'new techniques', 'necessary conditions', 'safety level']
+TextRank Prunned + FPM (cooccurence) :
+['exchange network', 'free routing', 'tolerant routing', 'fault tolerant routing', 'fault tolerant']
+TextRank Full + FPM (cooccurence) :
+['interconnection networks', 'interconnection network', 'tolerant routing', 'fault tolerant routing', 'fault tolerant']
+
+Cluster3
+TPR :
+[u'instruction cache performance', u'data cache performance', u'cache memory designs', u'data cache access', u'instruction cache design']
+TextRank Prunned + FPM (w2v) :
+['first level', 'operating system', 'performance results', 'code density', 'run time']
+TextRank Prunned + FPM (cooccurence) :
+['memory instruction', 'instruction cache', 'cache performance', 'data cache', 'execution time']
+TextRank Full + FPM (cooccurence) :
+['cache performance', 'memory instruction', 'instruction cache', 'data cache', 'data prefetching']
+
+Cluster1
+TPR :
+[u'wireless data networks', u'network performance', u'network traffic', u'wireless data broadcast', u'network weather service']
+TextRank Prunned + FPM (w2v) :
+['point point', 'log based', 'data given', 'rate control', 'two stage']
+TextRank Prunned + FPM (cooccurence) :
+['wireless networks', 'wireless data', 'reliable multicast', 'peer peer', 'key management']
+TextRank Full + FPM (cooccurence) :
+['network performance', 'tcp performance', 'wireless data', 'system multicast', 'key server']
+
+Cluster6
+TPR :
+[u'ternary logic functions', u'universal logic functions', u'multiple-valued logic functions', u'fuzzy logic functions', u'b-ternary logic functions']
+TextRank Prunned + FPM (w2v) :
+['two level', 'previous methods', 'proposed algorithm', 'low complexity', 'complex number']
+TextRank Prunned + FPM (cooccurence) :
+['digit digit', 'multiplication radix', 'radix digit', 'logic function', 'logic functions']
+TextRank Full + FPM (cooccurence) :
+['number multiplier', 'logic function', 'logic functions', 'digit digit', 'multiplication radix']
+
+Cluster7
+TPR :
+[u'periodic real-time tasks', u'task scheduling problem', u'periodic task systems', u'dynamic scheduling algorithm', u'real-time task model']
+TextRank Prunned + FPM (w2v) :
+['system wide', 'system wide energy', 'energy optimization', 'wide energy', 'prime time']
+TextRank Prunned + FPM (cooccurence) :
+['real time', 'time tasks', 'scheduling tasks', 'scheduling real', 'time scheduling']
+TextRank Full + FPM (cooccurence) :
+['scheduling algorithm', 'time scheduling', 'scheduling real', 'real time', 'scheduling task']
+
+Cluster4
+TPR :
+[u'new fault model', u'system fault diagnosis', u'high fault coverage', u'test pattern generation', u'complete fault coverage']
+TextRank Prunned + FPM (w2v) :
+['application time', 'multiprocessor systems', 'reliability model', 'algorithm based', 'cost function']
+TextRank Prunned + FPM (cooccurence) :
+['test test', 'based fault', 'test pattern', 'faults fault', 'based injection']
+TextRank Full + FPM (cooccurence) :
+['test test', 'faults fault', 'system fault', 'scan circuits', 'based fault']
+
+Cluster5
+TPR :
+[u'polynomial time algorithm', u'n algorithm', u'n log n', u'time algorithm', u'best polynomial algorithm']
+TextRank Prunned + FPM (w2v) :
+['cost flow', 'running time', 'cost flow problem', 'flow problem', 'problem size']
+TextRank Prunned + FPM (cooccurence) :
+['time algorithm', 'log time', 'shortest path', 'log time ogr', 'ogr log time']
+TextRank Full + FPM (cooccurence) :
+['time algorithm', 'log time', 'complexity log', 'problem size', 'approximation algorithm']
+
