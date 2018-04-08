@@ -34,9 +34,16 @@ if __name__ == "__main__" :
     #CLUSTER LABELING OUTPUT
     KEYPHRASE = output_folder + "keyphrase_textrank.txt"
 
+    #PARAMETER
+    n_clusters = 14
+    min_count = 3
+    min_count_phrase = 3
+    min_dist = 0.9
+    max_phrase = 5
+
     print ("START")
     
-    #'''PRE-PROCESS OFF
+    '''PRE-PROCESS OFF
 
     print ("PRE-PROCESS")
     
@@ -52,8 +59,8 @@ if __name__ == "__main__" :
     #PRE-PROCESS OFF'''
 
     #LOAD DATA FROM PICkLE PRE-PROCESS
-    #unpack = load_from_pickle(ARTICLE)
-    #articles_id, articles_tokenized = unpack[0], unpack[1]
+    unpack = load_from_pickle(ARTICLE)
+    articles_id, articles_tokenized = unpack[0], unpack[1]
 
     #TRAIN WORD2VEC
     #train_word2vec(articles_tokenized, modelname)
@@ -65,7 +72,6 @@ if __name__ == "__main__" :
     #CLUSTERING
     print ("CLUSTERING")
     
-    n_clusters = 11
     cluster_labels, sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
@@ -106,8 +112,6 @@ if __name__ == "__main__" :
 
     print("FREQUENT PHRASE MINING")
     #FREQUENT PHRASE MINING
-    min_count = 3
-    min_count_phrase = 3
     clust_words, clust_phrases = extract_clust_phrases(clust_articles_tokenized, min_count, min_count_phrase)
 
     #HIERARCHICAL CLUSTER MERGING
@@ -124,7 +128,6 @@ if __name__ == "__main__" :
     graphdist_matrix = generate_graphdist_matrix(cluster_graph, GRAPHDIST_MATRIX)
 
     #THE CLUSTER MERGING
-    min_dist = 0.90
     merged_cluster = hier_cluster_merging(graphdist_matrix, min_dist, plot=False)
     save_to_pickle(MERGED_CLUSTER)
     
@@ -178,7 +181,6 @@ if __name__ == "__main__" :
     print("CLUSTER LABELING")
     #CLUSTER LABELING
     #clust_text = [' '.join(t) for t in new_clust_words]
-    max_phrase = 5
     clust_keywords2, clust_keyphrases2 = cluster_labeling_cooccurence(new_clust_words, 
                                                                       new_clust_phrases, 
                                                                       new_clust_articles_content,
