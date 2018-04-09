@@ -5,6 +5,7 @@ src/documents/*
 src/output/*
 src/output_600data/*
 src/output_550data/*
+src/Utils.pyc
 desktop.ini
 
 # exception to the rule
