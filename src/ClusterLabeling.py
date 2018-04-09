@@ -142,7 +142,7 @@ def build_graph_cooccurence(nodes, sentences, win) :
 
     #generate co-occurence relation on graph
     #iteration on list of sentences
-    for sen in tqdm(sentences, leave=False, desc='Sentences') :
+    for sen in tqdm(sentences, leave=False, desc='Generate Edges') :
         sen_split = sen.split(' ')
         #iteration on list of words in a sentence
         for word_index in range(len(sen_split)) :
@@ -330,7 +330,7 @@ def cluster_labeling_v2(clust_text, clust_phrases, w2v_model, max_phrase) :
     return clust_keywords, clust_keyphrases
 
 def cluster_labeling_cooccurence(clust_words, clust_phrases, clust_contents, max_phrase) :
-    logging.info('Cluster labeling.....')
+    logging.info('Cluster labeling [START]')
     clust_keyphrases = []
     clust_keywords = []
 
@@ -341,13 +341,13 @@ def cluster_labeling_cooccurence(clust_words, clust_phrases, clust_contents, max
         all_contents = ' '.join(contents)
         #EXTRACT SENTENCES IN A CLUSTER
         sentences = extract_sentences(all_contents)
-        sentences = [preprocess_text(sen) for sen in tqdm(sentences, leave=False)]
+        sentences = [preprocess_text(sen) for sen in tqdm(sentences, leave=False, desc='Pre-proces Sentences')]
 
         win = 2
         keywords = extract_key_phrases_cooccurence(words, sentences, win)
         clust_keywords.append(keywords)
     
-    for i in tqdm(range(len(clust_phrases)), leave=False) :
+    for i in tqdm(range(len(clust_phrases)), leave=False, desc='Checking Phrases' ) :
         temp_phrases = []
         clust_keyphrases.append([])
         temp_keywords = []
@@ -365,6 +365,7 @@ def cluster_labeling_cooccurence(clust_words, clust_phrases, clust_contents, max
             if (n>len(clust_keywords[i]) - 1) :
                 break
     
+    logging.info('Cluster labeling [DONE]')
     return clust_keywords, clust_keyphrases
 
 

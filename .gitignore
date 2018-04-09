@@ -3,15 +3,13 @@ src/__pycache__/*
 src/600data_generator/*
 src/documents/*
 src/output/*
-src/output_600data/*
-src/output_550data/*
+src/output_article600/*
+src/output_article550/*
+src/output*/*
 src/Utils.pyc
 *.pyc
 desktop.ini
 
 # exception to the rule
 !src/documents/.gitkeep
-!src/output/.gitkeep
-!src/output_600data/.gitkeep
-!src/output_550data/.gitkeep
 src/Utils.pyc

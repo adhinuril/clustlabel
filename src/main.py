@@ -4,17 +4,15 @@ from ClusterMerging import *
 from ClusterLabeling import *
 from FrequentPhraseMining import *
 import mysql.connector
+import os
 
 if __name__ == "__main__" :
-    '''Jangan lupa kalo ganti database, diganti bagian :
-        - collecting_data() - Clustering
-        - store_cluster_label - Clustering
-        - cluster_to_csv() - Clustering
-    '''
     #PREPARE THE OUTPUT
-    conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database='article550')
+    DB_NAME = 'article550'
+    conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
     modelname = 'w2v_model/all_articles.w2v'
-    output_folder = "output_550data/"
+    output_folder = 'output_' + DB_NAME + '/'
+    os.makedirs(os.path.dirname(output_folder), exist_ok=True)
     #PRE-PROCESS OUTPUT
     ARTICLE = output_folder + "article_dump.pkl"
     #CLUSTERING OUTPUT
@@ -43,7 +41,7 @@ if __name__ == "__main__" :
 
     print ("START")
     
-    '''PRE-PROCESS OFF
+    #'''PRE-PROCESS OFF
 
     print ("PRE-PROCESS")
     
@@ -59,8 +57,8 @@ if __name__ == "__main__" :
     #PRE-PROCESS OFF'''
 
     #LOAD DATA FROM PICkLE PRE-PROCESS
-    unpack = load_from_pickle(ARTICLE)
-    articles_id, articles_tokenized = unpack[0], unpack[1]
+    #unpack = load_from_pickle(ARTICLE)
+    #articles_id, articles_tokenized = unpack[0], unpack[1]
 
     #TRAIN WORD2VEC
     #train_word2vec(articles_tokenized, modelname)
@@ -177,11 +175,10 @@ if __name__ == "__main__" :
     #unpack = load_from_pickle(CLUST_KEYTOKENS_MERGED)
     #new_clust_words, new_clust_phrases = unpack[0], unpack[1]
     
-    ''' CLUSTER LABELING OFF
+    #''' CLUSTER LABELING OFF
 
     print("CLUSTER LABELING")
     #CLUSTER LABELING
-    #clust_text = [' '.join(t) for t in new_clust_words]
     clust_keywords2, clust_keyphrases2 = cluster_labeling_cooccurence(new_clust_words, 
                                                                       new_clust_phrases, 
                                                                       new_clust_articles_content,
