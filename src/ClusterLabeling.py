@@ -142,7 +142,7 @@ def build_graph_cooccurence(nodes, sentences, win) :
 
     #generate co-occurence relation on graph
     #iteration on list of sentences
-    for sen in sentences :
+    for sen in tqdm(sentences, leave=False, desc='Sentences') :
         sen_split = sen.split(' ')
         #iteration on list of words in a sentence
         for word_index in range(len(sen_split)) :

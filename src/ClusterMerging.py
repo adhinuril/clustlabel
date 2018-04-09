@@ -1,7 +1,7 @@
 import logging, warnings
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 import networkx as nx
-from ClusterLabeling import build_graph
+from ClusterLabeling import *
 import csv
 from tqdm import tqdm
 import numpy as np
@@ -14,6 +14,23 @@ def generate_cluster_graph(clust_words, model) :
     cluster_graph = []
     for i in tqdm(range(len(clust_words)), leave=False) :
         gr = build_graph(clust_words[i], model)
+        cluster_graph.append(gr)
+    return cluster_graph
+
+def generate_cluster_graph_v2(clust_words, clust_contents) :
+    '''
+    v2 : pake graph co-occurence
+    '''
+    logging.info('Generating Graph....')
+    cluster_graph = []
+    for i in tqdm(range(len(clust_words)), leave=False) :
+        contents = clust_contents[i]
+        #MERGE ALL CONTENTS IN A CLUSTER
+        all_contents = ' '.join(contents)
+        #EXTRACT SENTENCES IN A CLUSTER
+        sentences = extract_sentences(all_contents)
+        win = 2
+        gr = build_graph_cooccurence(clust_words[i], sentences, win)
         cluster_graph.append(gr)
     return cluster_graph
 
@@ -43,11 +60,11 @@ def graph_to_csv(G, nfilename, efilename) :
     logging.info("Graph CSV created successfully!")
 
 def generate_mcs(G1,G2) :
-    common_node = [x for x in G1 if x in G2]
+    common_node = [x for x in tqdm(G1, leave=False, desc='MCS nodes') if x in G2]
     G3 = nx.Graph()
     G3.add_nodes_from(common_node)
     
-    for node_i in G3 :
+    for node_i in tqdm(G3, leave=False, desc='MCS edges') :
         neighbours = list(G1.adj[node_i])
         for node_j in neighbours :
             if (node_i,node_j) in list(G2.edges()) :
@@ -75,8 +92,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     n = len(cluster_graph)
     graphdist_matrix = np.zeros((n,n))
 
-    for i in tqdm(range(n-1), leave=False) :
-        for j in tqdm(range(i+1,n), leave=False) :
+    for i in tqdm(range(n-1), leave=False, desc='Graph source') :
+        for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
             dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist

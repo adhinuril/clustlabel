@@ -35,7 +35,7 @@ if __name__ == "__main__" :
     KEYPHRASE = output_folder + "keyphrase_textrank.txt"
 
     #PARAMETER
-    n_clusters = 14
+    n_clusters = 13
     min_count = 3
     min_count_phrase = 3
     min_dist = 0.9
@@ -119,6 +119,7 @@ if __name__ == "__main__" :
 
     #GENERATE & SAVE GRAPH FOR EVERY CLUSTER
     cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+    #cluster_graph = generate_cluster_graph_v2(clust_words, clust_articles_content)
     #save_to_pickle('output_600data/cluster_graph.pkl', cluster_graph)
     #LOAD CLUSTER GRAPH FOR HIERARCHICAL CLUSTER MERGING
     #unpack = load_from_pickle('output_600data/cluster_graph.pkl')
