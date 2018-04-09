@@ -6,6 +6,7 @@ src/output/*
 src/output_600data/*
 src/output_550data/*
 src/Utils.pyc
+*.pyc
 desktop.ini
 
 # exception to the rule
@@ -13,3 +14,4 @@ desktop.ini
 !src/output/.gitkeep
 !src/output_600data/.gitkeep
 !src/output_550data/.gitkeep
+src/Utils.pyc
