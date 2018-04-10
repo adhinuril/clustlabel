@@ -114,7 +114,7 @@ def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, p
         dim_matrix = article_matrix.shape
         silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
 
-    return cluster_labels, sample_silhouette_values
+    return cluster_labels, silhouette_avg, sample_silhouette_values
 
 def cluster_tfidf(articles_tokenized, n_clusters) :
     logging.info("Preparing data for Clustering....")
@@ -248,6 +248,24 @@ def collecting_cluster_data(conn) :
         clust_articles_content.append(c_art_content)
     
     logging.info("Loading Cluster Data from database [DONE]")
+    return clust_articles_id, clust_articles_content
+
+def postprocess_clustering(cluster_labels, articles_id, articles_content) :
+    n_clust = max(cluster_labels)
+    clust_articles_id = []
+    clust_articles_content = []
+
+    for i in range(n_clust) :
+        clust_articles_id.append([])
+        clust_articles_content.append([])
+
+    for i in range(len(cluster_labels)) :
+        current_cluster = cluster_labels[i]
+        art_id = articles_id[i]
+        art_content = articles_content[i]
+        clust_articles_id[current_cluster].append(art_id)
+        clust_articles_content[current_cluster].append(art_content)
+    
     return clust_articles_id, clust_articles_content
 
 if __name__ == "__main__" :
