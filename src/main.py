@@ -77,10 +77,10 @@ def main(DB_NAME, n_clusters) :
                                                                 n_clusters,
                                                                 SILHSCORE_ORI,
                                                                 False)
-    #store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
-    #cluster_tocsv(conn, CLUSTER_ORI)
+    store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
+    cluster_tocsv(conn, CLUSTER_ORI)
     #TAMBAHAN UNTUK NON-DATABASE
-    clust_articles_id, clust_articles_content = postprocess_clustering(cluster_labels,articles_id, articles_content)
+    #clust_articles_id, clust_articles_content = postprocess_clustering(cluster_labels,articles_id, articles_content)
     
     #LOAD CLUSTERS FROM DATABASE
     clust_articles_id, clust_articles_content = collecting_cluster_data(conn)
