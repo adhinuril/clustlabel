@@ -3,12 +3,14 @@ from Clustering import *
 from ClusterMerging import *
 from ClusterLabeling import *
 from FrequentPhraseMining import *
+from tqdm import tqdm
 import mysql.connector
 import os
+import csv
 
-if __name__ == "__main__" :
+def main(DB_NAME, n_clusters) :
     #PREPARE THE OUTPUT
-    DB_NAME = 'article550'
+    #DB_NAME = 'article550'
     conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
     modelname = 'w2v_model/all_articles.w2v'
     output_folder = 'output_' + DB_NAME + '/'
@@ -33,7 +35,7 @@ if __name__ == "__main__" :
     KEYPHRASE = output_folder + "keyphrase_textrank.txt"
 
     #PARAMETER
-    n_clusters = 13
+    #n_clusters = 13
     min_count = 3
     min_count_phrase = 3
     min_dist = 0.9
@@ -41,7 +43,7 @@ if __name__ == "__main__" :
 
     print ("START")
     
-    #'''PRE-PROCESS OFF
+    '''PRE-PROCESS OFF
 
     print ("PRE-PROCESS")
     
@@ -57,8 +59,8 @@ if __name__ == "__main__" :
     #PRE-PROCESS OFF'''
 
     #LOAD DATA FROM PICkLE PRE-PROCESS
-    #unpack = load_from_pickle(ARTICLE)
-    #articles_id, articles_tokenized = unpack[0], unpack[1]
+    unpack = load_from_pickle(ARTICLE)
+    articles_id, articles_tokenized = unpack[0], unpack[1]
 
     #TRAIN WORD2VEC
     #train_word2vec(articles_tokenized, modelname)
@@ -70,13 +72,15 @@ if __name__ == "__main__" :
     #CLUSTERING
     print ("CLUSTERING")
     
-    cluster_labels, sample_silhouette_values = cluster_word2vec(w2v_model,
+    cluster_labels, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_ORI,
                                                                 False)
-    store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
-    cluster_tocsv(conn, CLUSTER_ORI)
+    #store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
+    #cluster_tocsv(conn, CLUSTER_ORI)
+    #TAMBAHAN UNTUK NON-DATABASE
+    clust_articles_id, clust_articles_content = postprocess_clustering(cluster_labels,articles_id, articles_content)
     
     #LOAD CLUSTERS FROM DATABASE
     clust_articles_id, clust_articles_content = collecting_cluster_data(conn)
@@ -151,7 +155,7 @@ if __name__ == "__main__" :
     #RE-CLUSTERING WITH NEW CLUSTER NUMBER
     print("RE-CLUSTERING")
     n_clusters = new_n_clusters
-    cluster_labels_reclust, sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
+    cluster_labels_reclust, silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_RECLUST,
@@ -175,7 +179,7 @@ if __name__ == "__main__" :
     #unpack = load_from_pickle(CLUST_KEYTOKENS_MERGED)
     #new_clust_words, new_clust_phrases = unpack[0], unpack[1]
     
-    #''' CLUSTER LABELING OFF
+    ''' CLUSTER LABELING OFF
 
     print("CLUSTER LABELING")
     #CLUSTER LABELING
@@ -210,3 +214,35 @@ if __name__ == "__main__" :
 
     # CLUSTER LABELING OFF '''
     conn.close()
+
+    return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
+
+def main_n() :
+    #PREPARE INPUT AND OUTPUT
+    DB_NAME = 'article550'
+    output_folder = 'output_' + DB_NAME + '/'
+    os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+    #PREPARE CSV FILE
+    filename = output_folder + 'silhscore_comparison.csv'
+    csvfile = open(filename, 'w', newline='')
+    csvwriter = csv.writer(csvfile, delimiter=';')
+    csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
+    csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
+    #PREPARE PARAMETER
+    try_n_clusters = [14]
+    n = 10
+
+    for n_clust in try_n_clusters :
+        for i in range(n) :
+            print('N CLUSTER ' + str(n_clust) + ' RUNNING NO-' + str(i+1))
+            silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(DB_NAME, n_clust)
+            delta = silhscore_reclust - silhscore_merged
+            delta_abs = abs(delta)
+            csvwriter.writerow([str(i+1), n_clust, silhscore_ori, 
+                                new_n_clust, silhscore_merged, silhscore_reclust, 
+                                delta, delta_abs])
+
+    csvfile.close()
+
+if __name__ == "__main__" :
+    main_n()
