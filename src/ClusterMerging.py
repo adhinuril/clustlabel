@@ -105,6 +105,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     std_dist = np.std(graphdistances)
     adapt_threshold = mean_dist - std_dist
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
+    adapt_threshold = round(adapt_threshold,2)
+    logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
     with open(graphdistfile,'w') as out :
         out.write(str(graphdist_matrix))
@@ -114,7 +116,7 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
 def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
     logging.info('Cluster merging [START]')
     X = squareform(graphdist_matrix)
-    Z = linkage(X)
+    Z = linkage(X,'complete')
     fclust = fcluster(Z, min_dist, criterion='distance')
     if (plot) :
         plt.figure()

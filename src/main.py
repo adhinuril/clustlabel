@@ -229,8 +229,8 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = [9,10,11,12,13,14,15]
-    n = 20
+    try_n_clusters = [10,11,12]
+    n = 5
 
     for n_clust in try_n_clusters :
         acc_silh_ori = []
@@ -260,4 +260,5 @@ def main_n() :
     csvfile.close()
 
 if __name__ == "__main__" :
-    main_n()
+    #main_n()
+    main('article550',15)
