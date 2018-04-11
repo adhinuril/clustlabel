@@ -229,10 +229,14 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = [14]
-    n = 10
+    try_n_clusters = [9,10,11,12,13,14,15]
+    n = 20
 
     for n_clust in try_n_clusters :
+        acc_silh_ori = []
+        acc_silh_merged = []
+        acc_silh_reclust = []
+        acc_delta_abs = []
         for i in range(n) :
             print('N CLUSTER ' + str(n_clust) + ' RUNNING NO-' + str(i+1))
             silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(DB_NAME, n_clust)
@@ -241,6 +245,17 @@ def main_n() :
             csvwriter.writerow([str(i+1), n_clust, silhscore_ori, 
                                 new_n_clust, silhscore_merged, silhscore_reclust, 
                                 delta, delta_abs])
+            acc_silh_ori.append(silhscore_ori)
+            acc_silh_merged.append(silhscore_merged)
+            acc_silh_reclust.append(silhscore_reclust)
+            acc_delta_abs.append(delta_abs)
+        avg_silh_ori = sum(acc_silh_ori) / float(n)
+        avg_silh_merged = sum(acc_silh_merged) / float(n)
+        avg_silh_reclust = sum(acc_silh_reclust) / float(n)
+        avg_delta_abs = sum(acc_delta_abs) / float(n)
+        csvwriter.writerow(['','',avg_silh_ori,'',avg_silh_merged,avg_silh_reclust,'',avg_delta_abs])
+        csvwriter.writerow(['','','','','','','',''])
+        csvwriter.writerow(['','','','','','','',''])
 
     csvfile.close()
 
