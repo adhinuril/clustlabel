@@ -92,16 +92,24 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     n = len(cluster_graph)
     graphdist_matrix = np.zeros((n,n))
 
+    graphdistances = []
+
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
             dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
+            graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
+
+    mean_dist = np.mean(graphdistances)
+    std_dist = np.std(graphdistances)
+    adapt_threshold = mean_dist - std_dist
+    logging.info("Adaptive Threshold = " + str(adapt_threshold))
 
     with open(graphdistfile,'w') as out :
         out.write(str(graphdist_matrix))
 
-    return graphdist_matrix 
+    return graphdist_matrix, adapt_threshold 
 
 def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
     logging.info('Cluster merging [START]')

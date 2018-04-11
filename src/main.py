@@ -128,10 +128,10 @@ def main(DB_NAME, n_clusters) :
     #cluster_graph = unpack[0]
 
     #GENERATE GRAPH DISTANCE MATRIX
-    graphdist_matrix = generate_graphdist_matrix(cluster_graph, GRAPHDIST_MATRIX)
+    graphdist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, GRAPHDIST_MATRIX)
 
     #THE CLUSTER MERGING
-    merged_cluster = hier_cluster_merging(graphdist_matrix, min_dist, plot=False)
+    merged_cluster = hier_cluster_merging(graphdist_matrix, adapt_threshold, plot=False)
     save_to_pickle(MERGED_CLUSTER)
     
     #CLUSTER MAPPING
