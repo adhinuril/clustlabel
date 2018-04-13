@@ -101,6 +101,7 @@ def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, p
                     verbose=False) #Print progress reports inside k-means algorithm
     idx = km.fit(article_matrix)
     cluster_labels = km.labels_.tolist()
+    cluster_centers = km.cluster_centers_
     logging.info("Clustering [DONE]")
 
     #output
@@ -114,7 +115,7 @@ def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, p
         dim_matrix = article_matrix.shape
         silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
 
-    return cluster_labels, silhouette_avg, sample_silhouette_values
+    return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
 
 def cluster_tfidf(articles_tokenized, n_clusters) :
     logging.info("Preparing data for Clustering....")

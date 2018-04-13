@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy.spatial.distance import squareform
+from sklearn.metrics.pairwise import cosine_distances
 import matplotlib.pyplot as plt
 
 def generate_cluster_graph(clust_words, model) :
@@ -112,6 +113,39 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
         out.write(str(graphdist_matrix))
 
     return graphdist_matrix, adapt_threshold 
+
+def generate_centroiddist_matrix(centroids, centroiddistfile) :
+    logging.info("Generating Centroid Distance Matrix....")
+    n = len(centroids)
+    #centroiddist_matrix = np.zeros((n,n))
+    centroiddist_matrix = cosine_distances(centroids)
+
+    centroiddistances = []
+    '''
+    for i in tqdm(range(n-1), leave=False, desc='Centroid source') :
+        for j in tqdm(range(i+1,n), leave=False, desc='Centroid target') :
+            dist = cosine_distances(centroids[i], centroids[j])
+            centroiddistances.append(dist)
+            centroiddist_matrix[i][j] = dist
+            centroiddist_matrix[j][i] = dist
+    '''
+    for i in tqdm(range(n-1), leave=False, desc='Centroid source') :
+        for j in tqdm(range(i+1,n), leave=False, desc='Centroid target') :
+            dist = centroiddist_matrix[i][j]
+            centroiddistances.append(dist)
+
+    mean_dist = np.mean(centroiddistances)
+    std_dist = np.std(centroiddistances)
+    adapt_threshold = mean_dist - std_dist
+    logging.info("Adaptive Threshold = " + str(adapt_threshold))
+    adapt_threshold = round(adapt_threshold,2)
+    logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
+
+    with open(centroiddistfile,'w') as out :
+        out.write(str(centroiddist_matrix))
+
+    return centroiddist_matrix, adapt_threshold 
+    
 
 def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
     logging.info('Cluster merging [START]')

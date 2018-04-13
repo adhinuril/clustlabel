@@ -22,7 +22,7 @@ def main(DB_NAME, n_clusters) :
     CLUSTER_ORI = output_folder + "cluster_ori.csv"
     CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
     #HIERARCHICAL CLUSTER MERGING OUTPUT
-    GRAPHDIST_MATRIX = output_folder + "graphdist_matrix.txt"
+    DIST_MATRIX = output_folder + "dist_matrix.txt"
     MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
     CLUSTER_MAPPING = output_folder + "cluster_mapping.csv"
     SILHSCORE_MERGED = output_folder + "silhscore_merged.txt"
@@ -72,7 +72,7 @@ def main(DB_NAME, n_clusters) :
     #CLUSTERING
     print ("CLUSTERING")
     
-    cluster_labels, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
+    cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_ORI,
@@ -120,7 +120,7 @@ def main(DB_NAME, n_clusters) :
     print("HIERARCHICAL CLUSTER MERGING")
 
     #GENERATE & SAVE GRAPH FOR EVERY CLUSTER
-    cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+    #cluster_graph = generate_cluster_graph(clust_words, w2v_model)
     #cluster_graph = generate_cluster_graph_v2(clust_words, clust_articles_content)
     #save_to_pickle('output_600data/cluster_graph.pkl', cluster_graph)
     #LOAD CLUSTER GRAPH FOR HIERARCHICAL CLUSTER MERGING
@@ -128,10 +128,11 @@ def main(DB_NAME, n_clusters) :
     #cluster_graph = unpack[0]
 
     #GENERATE GRAPH DISTANCE MATRIX
-    graphdist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, GRAPHDIST_MATRIX)
+    #dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
+    dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
-    merged_cluster = hier_cluster_merging(graphdist_matrix, adapt_threshold, plot=False)
+    merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
     save_to_pickle(MERGED_CLUSTER)
     
     #CLUSTER MAPPING
@@ -155,7 +156,8 @@ def main(DB_NAME, n_clusters) :
     #RE-CLUSTERING WITH NEW CLUSTER NUMBER
     print("RE-CLUSTERING")
     n_clusters = new_n_clusters
-    cluster_labels_reclust, silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
+    cluster_labels_reclust, centroids_reclust, \
+    silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_RECLUST,
@@ -229,8 +231,8 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = [10,11,12]
-    n = 5
+    try_n_clusters = [13,14,15,16]
+    n = 20
 
     for n_clust in try_n_clusters :
         acc_silh_ori = []
@@ -260,5 +262,5 @@ def main_n() :
     csvfile.close()
 
 if __name__ == "__main__" :
-    #main_n()
-    main('article550',15)
+    main_n()
+    #main('article550',15)
