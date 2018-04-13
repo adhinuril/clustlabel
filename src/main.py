@@ -128,8 +128,9 @@ def main(DB_NAME, n_clusters) :
     #cluster_graph = unpack[0]
 
     #GENERATE GRAPH DISTANCE MATRIX
-    #dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
-    dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
+    cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
+    #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
     merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
@@ -231,7 +232,7 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = [13,14,15,16]
+    try_n_clusters = [10,11,12,13,14,15,16]
     n = 20
 
     for n_clust in try_n_clusters :
