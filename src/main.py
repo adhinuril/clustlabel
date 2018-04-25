@@ -8,44 +8,32 @@ import mysql.connector
 import os
 import csv
 
-def main(DB_NAME, n_clusters) :
-    #PREPARE THE OUTPUT
-    #DB_NAME = 'article550'
-    conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
-    modelname = 'w2v_model/all_articles.w2v'
-    output_folder = 'output_' + DB_NAME + '/'
-    os.makedirs(os.path.dirname(output_folder), exist_ok=True)
-    #PRE-PROCESS OUTPUT
-    ARTICLE = output_folder + "article_dump.pkl"
-    #CLUSTERING OUTPUT
-    SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
-    CLUSTER_ORI = output_folder + "cluster_ori.csv"
-    CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
-    #HIERARCHICAL CLUSTER MERGING OUTPUT
-    DIST_MATRIX = output_folder + "dist_matrix.txt"
-    MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
-    CLUSTER_MAPPING = output_folder + "cluster_mapping.csv"
-    SILHSCORE_MERGED = output_folder + "silhscore_merged.txt"
-    CLUSTER_MERGED = output_folder + "cluster_merged.csv"
-    CLUST_ARTICLE_MERGED = output_folder + "new_clust_article_dump.pkl"
-    CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
-    #RE-CLUSTERING OUTPUT
-    SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
-    #CLUSTER LABELING OUTPUT
-    KEYPHRASE = output_folder + "keyphrase_textrank.txt"
+#PREPARE THE OUTPUT
+DB_NAME = 'article550'
+conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
+modelname = 'w2v_model/all_articles.w2v'
+output_folder = 'output_' + DB_NAME + '/'
+os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+#PRE-PROCESS OUTPUT
+ARTICLE = output_folder + "article_dump.pkl"
+#CLUSTERING OUTPUT
+SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
+CLUSTER_ORI = output_folder + "cluster_ori.csv"
+CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
+#HIERARCHICAL CLUSTER MERGING OUTPUT
+DIST_MATRIX = output_folder + "dist_matrix.txt"
+MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
+CLUSTER_MAPPING = output_folder + "cluster_mapping.csv"
+SILHSCORE_MERGED = output_folder + "silhscore_merged.txt"
+CLUSTER_MERGED = output_folder + "cluster_merged.csv"
+CLUST_ARTICLE_MERGED = output_folder + "new_clust_article_dump.pkl"
+CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
+#RE-CLUSTERING OUTPUT
+SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
+#CLUSTER LABELING OUTPUT
+KEYPHRASE = output_folder + "keyphrase_textrank.txt"
 
-    #PARAMETER
-    #n_clusters = 13
-    min_count = 3
-    min_count_phrase = 3
-    min_dist = 0.9
-    max_phrase = 5
-
-    print ("START")
-    
-    '''PRE-PROCESS OFF
-
-    print ("PRE-PROCESS")
+def preprocess() :
     
     #LOAD DATA DIRECTLY FROM DATABASE
     articles_id, articles_content = collecting_data(conn)
@@ -56,22 +44,10 @@ def main(DB_NAME, n_clusters) :
     #SAVE FILE TO PICKLE PRE-PROCESS
     save_to_pickle(ARTICLE, articles_id, articles_tokenized)
 
-    #PRE-PROCESS OFF'''
+    #return articles_id, articles_content, articles_tokenized
 
-    #LOAD DATA FROM PICkLE PRE-PROCESS
-    unpack = load_from_pickle(ARTICLE)
-    articles_id, articles_tokenized = unpack[0], unpack[1]
+def clustering(w2v_model,articles_id,articles_tokenized,n_clusters) :
 
-    #TRAIN WORD2VEC
-    #train_word2vec(articles_tokenized, modelname)
-    #LOAD WORD2VEC MODEL
-    w2v_model = load_word2vec(modelname)
-    
-    #'''CLUSTERING OFF
-
-    #CLUSTERING
-    print ("CLUSTERING")
-    
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
@@ -79,8 +55,6 @@ def main(DB_NAME, n_clusters) :
                                                                 False)
     store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
     cluster_tocsv(conn, CLUSTER_ORI)
-    #TAMBAHAN UNTUK NON-DATABASE
-    #clust_articles_id, clust_articles_content = postprocess_clustering(cluster_labels,articles_id, articles_content)
     
     #LOAD CLUSTERS FROM DATABASE
     clust_articles_id, clust_articles_content = collecting_cluster_data(conn)
@@ -91,50 +65,20 @@ def main(DB_NAME, n_clusters) :
     #SAVE FILE TO PICKLE CLUSTERING
     save_to_pickle(CLUST_ARTICLE , clust_articles_id, 
                                    clust_articles_tokenized,
-                                   clust_articles_content)
+                                   clust_articles_content,
+                                   centroids,
+                                   silhscore_ori)
 
-    #CLUSTERING OFF '''
-
-    #LOAD DATA FROM PICkLE CLUSTERING
-    #unpack = load_from_pickle(CLUST_ARTICLE)
-    #clust_articles_id, clust_articles_tokenized, clust_articles_content = unpack[0], unpack[1], unpack[2]
-
-    '''
-    #EXPERIMENT FPM
-    clust_artcontent_tokenized = []
-    for i in range(len(clust_articles_content)) :
-        clust_articles = clust_articles_content[i]
-        clust_artcontent_tokenized.append([])
-        for article_content in clust_articles :
-            preprocessed_content = preprocess_text_experimental(article_content)
-            clust_artcontent_tokenized[i].append(preprocessed_content.split(' '))
-    #'''
-
-    #''''FPM & HIERARCHICAL CLUSTER MERGING & RE-CLUSTERING OFF
-
-    print("FREQUENT PHRASE MINING")
-    #FREQUENT PHRASE MINING
-    clust_words, clust_phrases = extract_clust_phrases(clust_articles_tokenized, min_count, min_count_phrase)
-
-    #HIERARCHICAL CLUSTER MERGING
-    print("HIERARCHICAL CLUSTER MERGING")
-
-    #GENERATE & SAVE GRAPH FOR EVERY CLUSTER
-    #cluster_graph = generate_cluster_graph(clust_words, w2v_model)
-    #cluster_graph = generate_cluster_graph_v2(clust_words, clust_articles_content)
-    #save_to_pickle('output_600data/cluster_graph.pkl', cluster_graph)
-    #LOAD CLUSTER GRAPH FOR HIERARCHICAL CLUSTER MERGING
-    #unpack = load_from_pickle('output_600data/cluster_graph.pkl')
-    #cluster_graph = unpack[0]
-
+def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
+                 clust_articles_tokenized, clust_articles_content, centroids) :
+    
     #GENERATE GRAPH DISTANCE MATRIX
     #cluster_graph = generate_cluster_graph(clust_words, w2v_model)
     #dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
-    #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
+    dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
     merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
-    save_to_pickle(MERGED_CLUSTER)
     
     #CLUSTER MAPPING
     new_n_clusters = output_cluster_mapping(merged_cluster, CLUSTER_MAPPING)
@@ -154,36 +98,75 @@ def main(DB_NAME, n_clusters) :
     new_avg_silh, new_samples_silh = calculate_silhouette(new_article_matrix, new_flat_cluster_label)
     output_new_avg_silh(new_n_clusters, new_avg_silh, SILHSCORE_MERGED)
 
-    #RE-CLUSTERING WITH NEW CLUSTER NUMBER
-    print("RE-CLUSTERING")
-    n_clusters = new_n_clusters
-    cluster_labels_reclust, centroids_reclust, \
-    silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
-                                                                articles_tokenized,
-                                                                n_clusters,
-                                                                SILHSCORE_RECLUST,
-                                                                False)
-
     #STORE NEW CLUSTER LABEL TO DATABASE & CREATE CSV FILE
     store_cluster_label(conn, new_flat_articles_id, new_flat_cluster_label, new_samples_silh)
     cluster_tocsv(conn, CLUSTER_MERGED)
 
     #SAVE FILE TO PICKLE HIERARCHICAL CLUSTER MERGING
     save_to_pickle(CLUST_ARTICLE_MERGED, new_clust_articles_id, 
-                                                                new_clust_articles_tokenized, 
-                                                                new_clust_articles_content)
+                                         new_clust_articles_tokenized, 
+                                         new_clust_articles_content,
+                                         new_avg_silh)
     save_to_pickle(CLUST_KEYTOKENS_MERGED, new_clust_words, new_clust_phrases)
 
-    #FPM & HIERARCHICAL CLUSTER MERGING OFF'''
+def main(n_clusters) :
 
-    #LOAD DATA FROM PICkLE HIERARCHICAL CLUSTER MERGING
-    #unpack = load_from_pickle(CLUST_ARTICLE_MERGED)
-    #new_clust_articles_id, new_clust_articles_tokenized, new_clust_articles_content = unpack[0], unpack[1], unpack[2]
-    #unpack = load_from_pickle(CLUST_KEYTOKENS_MERGED)
-    #new_clust_words, new_clust_phrases = unpack[0], unpack[1]
+    #PARAMETER
+    #n_clusters = 13
+    min_count = 3
+    min_count_phrase = 3
+    min_dist = 0.9
+    max_phrase = 5
+
+    print ("START")
+
+    #PREPROCESS
+    print ("PRE-PROCESS")
+    #preprocess()
+    #LOAD PICKLE FROM PREPROCESS
+    unpack = load_from_pickle(ARTICLE)
+    articles_id, articles_tokenized = unpack[0], unpack[1]
+
+    #LOAD WORD2VEC MODEL
+    #train_word2vec(articles_tokenized, modelname)
+    w2v_model = load_word2vec(modelname)
     
-    ''' CLUSTER LABELING OFF
+    #CLUSTERING
+    print ("CLUSTERING")
+    clustering(w2v_model,articles_id,articles_tokenized,n_clusters)
+    
+    #LOAD PICKLE FROM CLUSTERING
+    unpack = load_from_pickle(CLUST_ARTICLE)
+    clust_articles_id, clust_articles_tokenized, clust_articles_content, centroids, silhscore_ori = \
+       unpack[0], unpack[1], unpack[2], unpack[3], unpack[4]
 
+    #FREQUENT PHRASE MINING
+    print("FREQUENT PHRASE MINING")
+    clust_words, clust_phrases = extract_clust_phrases(clust_articles_tokenized, min_count, min_count_phrase)
+
+    #HIERARCHICAL CLUSTER MERGING
+    print("HIERARCHICAL CLUSTER MERGING")
+    clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id, 
+                 clust_articles_tokenized,clust_articles_content, centroids)
+    
+    #LOAD PICKLE FROM CLUSTER MERGING
+    unpack = load_from_pickle(CLUST_ARTICLE_MERGED)
+    new_clust_articles_id, new_clust_articles_tokenized, new_clust_articles_content, new_avg_silh = \
+        unpack[0], unpack[1], unpack[2], unpack[3]
+    unpack = load_from_pickle(CLUST_KEYTOKENS_MERGED)
+    new_clust_words, new_clust_phrases = unpack[0], unpack[1]
+
+    #RE-CLUSTERING WITH NEW CLUSTER NUMBER
+    print("RE-CLUSTERING")
+    new_n_clusters = len(new_clust_articles_id)
+    cluster_labels_reclust, centroids_reclust, \
+    silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
+                                                                articles_tokenized,
+                                                                new_n_clusters,
+                                                                SILHSCORE_RECLUST,
+                                                                False)
+
+    '''
     print("CLUSTER LABELING")
     #CLUSTER LABELING
     clust_keywords2, clust_keyphrases2 = cluster_labeling_cooccurence(new_clust_words, 
@@ -215,14 +198,11 @@ def main(DB_NAME, n_clusters) :
         fout.write(str(clust_keyphrases2[i]) + '\n\n')
     fout.close()
 
-    # CLUSTER LABELING OFF '''
-    conn.close()
-
     return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
-
+    '''
+    
 def main_n() :
     #PREPARE INPUT AND OUTPUT
-    DB_NAME = 
     output_folder = 'output_' + DB_NAME + '/'
     os.makedirs(os.path.dirname(output_folder), exist_ok=True)
     #PREPARE CSV FILE
@@ -232,8 +212,8 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = []
-    n = 
+    try_n_clusters = [10]
+    n = 2
 
     for n_clust in try_n_clusters :
         acc_silh_ori = []
@@ -243,7 +223,7 @@ def main_n() :
         list_new_n = []
         for i in range(n) :
             print('N CLUSTER ' + str(n_clust) + ' RUNNING NO-' + str(i+1))
-            silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(DB_NAME, n_clust)
+            silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(n_clust)
             delta = silhscore_reclust - silhscore_merged
             delta_abs = abs(delta)
             csvwriter.writerow([str(i+1), n_clust, silhscore_ori, 
@@ -266,5 +246,7 @@ def main_n() :
     csvfile.close()
 
 if __name__ == "__main__" :
-    main_n()
-    #main('article550',15)
+    #main_n()
+    main(15)
+
+    conn.close()

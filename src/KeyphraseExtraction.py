@@ -1,5 +1,7 @@
 from pke.unsupervised import TopicalPageRank as keypex
+from palmettopy.palmetto import Palmetto
 from Utils import *
+import re
 import os
 
 def extract_keyphrases(extractor) :
@@ -33,29 +35,47 @@ def extract_keyphrases(extractor) :
     # print the n-highest (10) scored candidates
     return [u for u, v in extractor.get_n_best(n=5)]
 
+def natural_keys(text):
+    atoi = lambda c : int(c) if c.isdigit() else c
+    return [ atoi(c) for c in re.split('(\d+)', text) ]
+
 def generate_keyphrases_files(inputfolder, outputfile) :
     clust_files = []
     for file in os.listdir(inputfolder) :
         if file.endswith(".txt") :
             clust_files.append(os.path.join(inputfolder, file))
     
-    keyphrases_dict = dict()
+    keyphrases_list = []
+    clust_files.sort(key=natural_keys)
+
     for fin in clust_files :
         basename = os.path.splitext(fin)[0]
+        print(basename)
         clustname = basename.split('/')[1]
-        #outputfile = basename + "_keyphrases.txt"
-        #fout = open(outputfile,'w')
         extractor = keypex(input_file=fin)
         keyphrases = extract_keyphrases(extractor)
-        keyphrases_dict[clustname] = keyphrases
-        #fout.write(str(keyphrases))
-        #fout.close()
+        keyphrases_list.append(keyphrases)
+        print(topic_coherence(keyphrases))
     
     fout = open(outputfile,'w')
-    for clustname in keyphrases_dict :
-        fout.write(str(clustname) + '\n' + str(keyphrases_dict[clustname]) + '\n\n')
+    for clustno in range(len(keyphrases_list)) :
+        fout.write('Cluster' + str(clustno + 1) + '\n' + str(keyphrases_list[clustno]) + '\n\n')
     fout.close()
- 
+
+def topic_coherence(keyphrases) :
+
+    top_words = []
+    for phrase in keyphrases :
+        clean_phrase = preprocess_text(phrase)
+        words = clean_phrase.split(' ')
+        top_words.extend(words)
+    
+    top_words = list(set(top_words))
+    print(top_words)
+    palmetto = Palmetto()
+    score = palmetto.get_coherence(top_words)
+    return score
+
 def clear_txt(folderpath) :
     txtfiles = []
     for file in os.listdir(folderpath):
@@ -99,19 +119,14 @@ def load_documents_fpm(dumpfile, dumpkeytokensfile, outfolder) :
         f.close()
 
 if __name__ == "__main__" :
-    dumpfile = "output_600data/new_clust_article_dump.pkl"
-    dumpkeytokensfile = "output_600data/new_clust_keytokens_dump.pkl"
+    db_name = 'article550'
+    dumpfile = "output_" + db_name + "/clust_article_dump.pkl"
     folderpath = "documents/"
-    outputfile = "output_600data/keyphrase_pke.txt"
-    outputfile_fpm = "output_600data/keyphrase_pke_fpm.txt"
-
+    outputfile = "output_" + db_name + "/keyphrase_pke.txt"
+    
     #KEYPHRASE EXTRACTION BIASA
     load_documents(dumpfile, folderpath)
     generate_keyphrases_files(folderpath, outputfile)
-
-    #KEYPHRASE EXTRACTION PAKE FPM
-    load_documents_fpm(dumpfile,dumpkeytokensfile,folderpath)
-    generate_keyphrases_files(folderpath, outputfile_fpm)
-
+    
     logging.info('Finished.')
     
