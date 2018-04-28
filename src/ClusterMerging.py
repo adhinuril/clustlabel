@@ -106,8 +106,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     std_dist = np.std(graphdistances)
     adapt_threshold = mean_dist - std_dist
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
-    adapt_threshold = round(adapt_threshold,2)
-    logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
+    #adapt_threshold = round(adapt_threshold,2)
+    #logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
     with open(graphdistfile,'w') as out :
         out.write(str(graphdist_matrix))
@@ -138,8 +138,8 @@ def generate_centroiddist_matrix(centroids, centroiddistfile) :
     std_dist = np.std(centroiddistances)
     adapt_threshold = mean_dist - std_dist
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
-    adapt_threshold = round(adapt_threshold,2)
-    logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
+    #adapt_threshold = round(adapt_threshold,2)
+    #logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
     with open(centroiddistfile,'w') as out :
         out.write(str(centroiddist_matrix))
