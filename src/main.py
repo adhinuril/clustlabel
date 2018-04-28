@@ -9,7 +9,7 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'article550'
+DB_NAME = 'articlex'
 conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
 modelname = 'w2v_model/all_articles.w2v'
 output_folder = 'output_' + DB_NAME + '/'
@@ -75,7 +75,7 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     #GENERATE GRAPH DISTANCE MATRIX
     #cluster_graph = generate_cluster_graph(clust_words, w2v_model)
     #dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
-    dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
+    #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
     merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
@@ -122,7 +122,7 @@ def main(n_clusters) :
 
     #PREPROCESS
     print ("PRE-PROCESS")
-    #preprocess()
+    preprocess()
     #LOAD PICKLE FROM PREPROCESS
     unpack = load_from_pickle(ARTICLE)
     articles_id, articles_tokenized = unpack[0], unpack[1]
@@ -197,10 +197,10 @@ def main(n_clusters) :
         fout.write('Keyphrases (cooccurence) :\n')
         fout.write(str(clust_keyphrases2[i]) + '\n\n')
     fout.close()
-
-    return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
     '''
+    return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
     
+
 def main_n() :
     #PREPARE INPUT AND OUTPUT
     output_folder = 'output_' + DB_NAME + '/'
@@ -212,8 +212,8 @@ def main_n() :
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])
     csvwriter.writerow(['', 'Original','','Merged','','Re-Clustering','',''])
     #PREPARE PARAMETER
-    try_n_clusters = [10]
-    n = 2
+    try_n_clusters = []
+    n = 0
 
     for n_clust in try_n_clusters :
         acc_silh_ori = []
@@ -247,6 +247,6 @@ def main_n() :
 
 if __name__ == "__main__" :
     #main_n()
-    main(15)
+    main()
 
     conn.close()
