@@ -1,8 +1,13 @@
 from pke.unsupervised import TopicalPageRank as keypex
-from palmettopy.palmetto import Palmetto
+from tqdm import tqdm
 from Utils import *
+from TopicCoherence import coherence_v
+import csv
 import re
 import os
+
+#GLOBAL
+db_name = 'article500_random'
 
 def extract_keyphrases(extractor) :
     
@@ -46,35 +51,28 @@ def generate_keyphrases_files(inputfolder, outputfile) :
             clust_files.append(os.path.join(inputfolder, file))
     
     keyphrases_list = []
+    tc_scores = []
     clust_files.sort(key=natural_keys)
 
-    for fin in clust_files :
+    for fin in tqdm(clust_files, leave=False) :
         basename = os.path.splitext(fin)[0]
-        print(basename)
         clustname = basename.split('/')[1]
         extractor = keypex(input_file=fin)
         keyphrases = extract_keyphrases(extractor)
         keyphrases_list.append(keyphrases)
-        print(topic_coherence(keyphrases))
+        tc_scores.append(coherence_v(keyphrases))
     
     fout = open(outputfile,'w')
-    for clustno in range(len(keyphrases_list)) :
-        fout.write('Cluster' + str(clustno + 1) + '\n' + str(keyphrases_list[clustno]) + '\n\n')
+    for i in range(len(keyphrases_list)) :
+        fout.write('Cluster' + str(i + 1) + '\n' + str(keyphrases_list[i]) + \
+                    '\n'+ 'Coherence : ' + str(tc_scores[i]) +'\n\n')
+    
+    avg_tc_scores = sum(tc_scores)/float(len(tc_scores))
+    fout.write('Mean Topic Coherence : ' + str(avg_tc_scores))
+
     fout.close()
 
-def topic_coherence(keyphrases) :
-
-    top_words = []
-    for phrase in keyphrases :
-        clean_phrase = preprocess_text(phrase)
-        words = clean_phrase.split(' ')
-        top_words.extend(words)
-    
-    top_words = list(set(top_words))
-    print(top_words)
-    palmetto = Palmetto()
-    score = palmetto.get_coherence(top_words)
-    return score
+    return keyphrases_list, tc_scores
 
 def clear_txt(folderpath) :
     txtfiles = []
@@ -118,15 +116,75 @@ def load_documents_fpm(dumpfile, dumpkeytokensfile, outfolder) :
             f.write(text + "\n")
         f.close()
 
+def clustermapping_generate() :
+    clustmap = dict()
+    clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
+    with open(clustermapfile) as csvfile :
+        rowreader = csv.reader(csvfile, delimiter=';')
+        for row in rowreader :
+            if row[0].isdigit() :
+                new_clust = int(row[0])
+                old_clust = int(row[1])
+                if new_clust not in clustmap :
+                    clustmap[new_clust] = []
+                clustmap[new_clust].append(old_clust)
+    return clustmap
+
+def output_topic_coherence(outputfile, keyphrases_list_ori, keyphrases_list_merged, 
+                           tc_scores_ori, tc_scores_merged) :
+    clustmap = clustermapping_generate()
+    sorted(clustmap)
+    merged_ori_cluster_tscores = []
+    with open(outputfile, 'wb') as csvfile :
+        csvwriter = csv.writer(csvfile, delimiter=';')
+        csvwriter.writerow(['New Cluster','','Coherence','Original Cluster','','Coherence'])
+        for new_clust in clustmap :
+            n_old_clusts = len(clustmap[new_clust])
+            old_clusts_tcscores = [tc_scores_ori[x-1] for x in clustmap[new_clust]]
+            avg_tscores_ori = sum(old_clusts_tcscores) / float(len(old_clusts_tcscores))
+            merged_ori_cluster_tscores.append(avg_tscores_ori)
+            counter = 0
+            for old_clust in clustmap[new_clust] :
+                if counter == 0 :
+                    csvwriter.writerow([str(new_clust),str(keyphrases_list_merged[new_clust-1]),
+                                        str(tc_scores_merged[new_clust-1]),
+                                        str(old_clust), str(keyphrases_list_ori[old_clust-1]),
+                                        str(tc_scores_ori[old_clust-1]),
+                                        str(avg_tscores_ori)])
+                    counter += 1
+                else :
+                    csvwriter.writerow(['','','',
+                                        str(old_clust),str(keyphrases_list_ori[old_clust-1]),
+                                        str(tc_scores_ori[old_clust-1])])
+        avg_merged = sum(tc_scores_merged) / float(len(tc_scores_merged))
+        avg_ori = sum(tc_scores_ori) / float(len(tc_scores_ori))
+        avg_merged_ori = sum(merged_ori_cluster_tscores) / float(len(merged_ori_cluster_tscores))
+        csvwriter.writerow(['','',avg_merged,'','',avg_ori, avg_merged_ori])
+        print 'avg_merged : ', avg_merged
+        print 'avg_ori : ', avg_ori
+        print 'avg_merged_ori : ', avg_merged_ori
+
 if __name__ == "__main__" :
-    db_name = 'article550'
-    dumpfile = "output_" + db_name + "/clust_article_dump.pkl"
+    
+    dumpfile1 = "output_" + db_name + "/clust_article_dump.pkl"
+    dumpfile2 = "output_" + db_name + "/new_clust_article_dump.pkl"
     folderpath = "documents/"
-    outputfile = "output_" + db_name + "/keyphrase_pke.txt"
+    outputfile1 = "output_" + db_name + "/keyphrase_pke_ori.txt"
+    outputfile2 = "output_" + db_name + "/keyphrase_pke_merged.txt"
+    outputcomparison = "output_" + db_name + "/tcoherence_comparison.csv"
     
     #KEYPHRASE EXTRACTION BIASA
-    load_documents(dumpfile, folderpath)
-    generate_keyphrases_files(folderpath, outputfile)
+    load_documents(dumpfile1, folderpath)
+    keyphrases_ori, tcscores_ori = generate_keyphrases_files(folderpath, outputfile1)
+    logging.info('Cluster labeling original cluster [DONE]')
+    load_documents(dumpfile2, folderpath)
+    keyphrases_merged, tcscores_merged = generate_keyphrases_files(folderpath, outputfile2)
+    logging.info('Cluster labeling merged cluster [DONE]')
     
+    output_topic_coherence(outputcomparison,
+                            keyphrases_ori, keyphrases_merged,
+                            tcscores_ori, tcscores_merged)
+
     logging.info('Finished.')
+    
     
