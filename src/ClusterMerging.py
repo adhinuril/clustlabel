@@ -61,15 +61,20 @@ def graph_to_csv(G, nfilename, efilename) :
     logging.info("Graph CSV created successfully!")
 
 def generate_mcs(G1,G2) :
-    common_node = [x for x in tqdm(G1, leave=False, desc='MCS nodes') if x in G2]
+    common_nodes = [x for x in tqdm(G1, leave=False, desc='MCS nodes') if x in G2]
     G3 = nx.Graph()
-    G3.add_nodes_from(common_node)
+    G3.add_nodes_from(common_nodes)
     
     for node_i in tqdm(G3, leave=False, desc='MCS edges') :
         neighbours = list(G1.adj[node_i])
         for node_j in neighbours :
             if (node_i,node_j) in list(G2.edges()) :
-                G3.add_edge(node_i,node_j)
+                weight_G1 = G1[node_i][node_j]['weight']
+                weight_G2 = G2[node_i][node_j]['weight']
+                min_weight = min([weight_G1, weight_G2])
+                max_weight = min([weight_G1, weight_G2])
+                mcs_weight = min_weight / float(max_weight)
+                G3.add_edge(node_i,node_j, weight=mcs_weight)
     
     return G3
 
@@ -88,6 +93,26 @@ def mcs_distance_score(G1,G2, alpha=0.7) :
     dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(g3_e/e_max)) )
     return dist_score
 
+def mcs_distance_score_v2(G1,G2, alpha=0.7) :
+    '''
+    v2 : Based on Wu et al. 2011; incorporating weight to the calculation.
+    '''
+    G3 = generate_mcs(G1,G2)
+
+    g3_n = G3.number_of_nodes()
+    g3_e = G3.number_of_edges()
+    g2_n = G2.number_of_nodes()
+    g2_e = G2.number_of_edges()
+    g1_n = G1.number_of_nodes()
+    g1_e = G1.number_of_edges()
+    n_max = max(g1_n,g2_n)
+    e_max = max(g1_e,g2_e)
+    mcs_weights = [d['weight'] for (u,v,d) in G3.edges(data=True)]
+    sum_weight = sum(mcs_weights)
+
+    dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(sum_weight/e_max)) )
+    return dist_score
+
 def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     logging.info("Generating Graph Distance Matrix....")
     n = len(cluster_graph)
@@ -97,7 +122,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
 
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
-            dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
+            #dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
+            dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
             graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
