@@ -9,7 +9,7 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'articlex'
+DB_NAME = 'article550'
 conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
 modelname = 'w2v_model/all_articles.w2v'
 output_folder = 'output_' + DB_NAME + '/'
@@ -32,6 +32,13 @@ CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
 SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
 #CLUSTER LABELING OUTPUT
 KEYPHRASE = output_folder + "keyphrase_textrank.txt"
+
+#PARAMETER
+#n_clusters = 13
+min_count = 3
+min_count_phrase = 3
+min_dist = 0.9
+max_phrase = 5
 
 def preprocess() :
     
@@ -78,7 +85,7 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
-    merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
+    merged_cluster = hier_cluster_merging(dist_matrix, min_dist, plot=False)
     
     #CLUSTER MAPPING
     new_n_clusters = output_cluster_mapping(merged_cluster, CLUSTER_MAPPING)
@@ -111,18 +118,11 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
 
 def main(n_clusters) :
 
-    #PARAMETER
-    #n_clusters = 13
-    min_count = 3
-    min_count_phrase = 3
-    min_dist = 0.9
-    max_phrase = 5
-
     print ("START")
 
     #PREPROCESS
     print ("PRE-PROCESS")
-    preprocess()
+    #preprocess()
     #LOAD PICKLE FROM PREPROCESS
     unpack = load_from_pickle(ARTICLE)
     articles_id, articles_tokenized = unpack[0], unpack[1]
@@ -247,6 +247,6 @@ def main_n() :
 
 if __name__ == "__main__" :
     #main_n()
-    main()
+    #main()
 
     conn.close()
