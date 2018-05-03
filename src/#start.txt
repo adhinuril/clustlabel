@@ -1,0 +1,6 @@
+database name : check
+cluster merging graph/ centroid : check
+cluster merging adaptive threshold : check
+cluster merging graph-distance measure : check
+preprocess neccesity : check
+main_n inputs : check
