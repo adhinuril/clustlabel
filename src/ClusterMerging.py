@@ -122,8 +122,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
 
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
-            #dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
-            dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
+            dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
+            #dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
             graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
@@ -135,8 +135,9 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     #adapt_threshold = round(adapt_threshold,2)
     #logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
-    with open(graphdistfile,'w') as out :
-        out.write(str(graphdist_matrix))
+    #with open(graphdistfile,'w') as out :
+    #    out.write(str(graphdist_matrix))
+    output_distmatrix_csv(graphdist_matrix, graphdistfile)
 
     return graphdist_matrix, adapt_threshold 
 
@@ -270,4 +271,18 @@ def output_cluster_mapping(merged_cluster, clustmapfile) :
     logging.info(str(n_merged_ori_clusters) + " original clusters merged to " + str(n_new_clusters) + " new clusters")
     return new_n_clust
 
+def output_distmatrix_csv(matrix, distfile) :
+    shape = matrix.shape[0]
+
+    with open(distfile, 'w', newline='') as csvfile :
+        csvwriter = csv.writer(csvfile, delimiter=';')
+
+        toprow = ['']
+        toprow.extend([str(i+1) for i in range(shape)])
+        csvwriter.writerow(toprow)
+
+        for i in range(shape) :
+            row = [str(i+1)]
+            row.extend([dist for dist in matrix[i]])
+            csvwriter.writerow(row)
 
