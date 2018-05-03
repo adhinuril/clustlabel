@@ -7,7 +7,10 @@ import re
 import os
 
 #GLOBAL
-db_name = 'article500_random'
+db_name = 'article550'
+input_folder = 'output_' + db_name + '/article_dumps/'
+coherence_loop_output = 'output_' + db_name + '/tcoherence_loop.csv'
+clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
 
 def extract_keyphrases(extractor) :
     
@@ -30,7 +33,7 @@ def extract_keyphrases(extractor) :
     # weight the candidates using a random walk. The threshold parameter sets the
     # minimum similarity for clustering, and the method parameter defines the 
     # linkage method
-    #extractor.candidate_weighting(threshold=0.74,
+    #extractor.candidate_weighting(threshold=0.5,
     #                            method='average')
     extractor.candidate_weighting()
 
@@ -74,18 +77,10 @@ def generate_keyphrases_files(inputfolder, outputfile) :
 
     return keyphrases_list, tc_scores
 
-def clear_txt(folderpath) :
-    txtfiles = []
-    for file in os.listdir(folderpath):
-        if file.endswith(".txt"):
-            txtfiles.append(os.path.join(folderpath, file))
-    for f in txtfiles :
-        os.remove(f)
-
 def load_documents(dumpfile, outfolder) :
     unpack = load_from_pickle(dumpfile)
     clust_articles_id, clust_articles_tokenized, clust_articles_content = unpack[0], unpack[1], unpack[2]
-    clear_txt(outfolder)
+    clear_folder(outfolder,'txt')
 
     for i in range(len(clust_articles_content)) :
         filename = outfolder + "Cluster" + str(i+1) + ".txt"
@@ -103,7 +98,7 @@ def load_documents_fpm(dumpfile, dumpkeytokensfile, outfolder) :
     clust_articles_id, clust_articles_tokenized = unpack1[0], unpack1[1]
     unpack2 = load_from_pickle(dumpkeytokensfile)
     clust_words = unpack2[0] 
-    clear_txt(outfolder)
+    clear_folder(outfolder,'txt')
 
     for i in range(len(clust_articles_tokenized)) :
         filename = outfolder + "Cluster" + str(i+1) + ".txt"
@@ -118,7 +113,6 @@ def load_documents_fpm(dumpfile, dumpkeytokensfile, outfolder) :
 
 def clustermapping_generate() :
     clustmap = dict()
-    clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
     with open(clustermapfile) as csvfile :
         rowreader = csv.reader(csvfile, delimiter=';')
         for row in rowreader :
@@ -164,27 +158,64 @@ def output_topic_coherence(outputfile, keyphrases_list_ori, keyphrases_list_merg
         print 'avg_ori : ', avg_ori
         print 'avg_merged_ori : ', avg_merged_ori
 
-if __name__ == "__main__" :
-    
-    dumpfile1 = "output_" + db_name + "/clust_article_dump.pkl"
-    dumpfile2 = "output_" + db_name + "/new_clust_article_dump.pkl"
+        return avg_merged, avg_ori, avg_merged_ori
+
+def main(dumpfile_ori, dumpfile_merged) :
     folderpath = "documents/"
     outputfile1 = "output_" + db_name + "/keyphrase_pke_ori.txt"
     outputfile2 = "output_" + db_name + "/keyphrase_pke_merged.txt"
     outputcomparison = "output_" + db_name + "/tcoherence_comparison.csv"
     
     #KEYPHRASE EXTRACTION BIASA
-    load_documents(dumpfile1, folderpath)
+    load_documents(dumpfile_ori, folderpath)
     keyphrases_ori, tcscores_ori = generate_keyphrases_files(folderpath, outputfile1)
     logging.info('Cluster labeling original cluster [DONE]')
-    load_documents(dumpfile2, folderpath)
+    load_documents(dumpfile_merged, folderpath)
     keyphrases_merged, tcscores_merged = generate_keyphrases_files(folderpath, outputfile2)
     logging.info('Cluster labeling merged cluster [DONE]')
     
-    output_topic_coherence(outputcomparison,
-                            keyphrases_ori, keyphrases_merged,
-                            tcscores_ori, tcscores_merged)
-
+    avg_merged, avg_ori, avg_merged_ori = output_topic_coherence(outputcomparison,
+                                                                 keyphrases_ori, keyphrases_merged,
+                                                                 tcscores_ori, tcscores_merged)
     logging.info('Finished.')
+
+    return avg_merged, avg_ori, avg_merged_ori
+
+def main_loop() :
+    clust_dict = dict()
+    for file in os.listdir(input_folder) :
+        file_noext = (file.split('.')[0]).split('_')
+        loopnumber = file_noext[len(file_noext)-1]
+        if loopnumber not in clust_dict :
+            clust_dict[loopnumber] = ['','','']
+        if file.split('_')[0] == 'new' :
+            clust_dict[loopnumber][1] = os.path.join(input_folder, file)
+        elif file.split('_')[0] == 'clust' :
+            clust_dict[loopnumber][0] = os.path.join(input_folder, file)
+        else :
+            clust_dict[loopnumber][2] = os.path.join(input_folder, file)
+    
+    csvfile = open(coherence_loop_output,'wb')
+    csvwriter = csv.writer(csvfile, delimiter=';')
+    csvwriter.writerow(['n Cluster','ID', 'Coherence Merged','Coherence Original', 'Coherence Ori-merged'])
+    
+    for loopnumber in clust_dict :
+        print loopnumber
+        dumpfile_ori = clust_dict[loopnumber][0]
+        dumpfile_merged = clust_dict[loopnumber][1]
+        global clustermapfile
+        clustermapfile = clust_dict[loopnumber][2]
+
+        avg_merged, avg_ori, avg_merged_ori = main(dumpfile_ori, dumpfile_merged)
+        n_clust = loopnumber.split('-')[0]
+        loop_id = loopnumber.split('-')[1]
+        csvwriter.writerow([n_clust,loop_id, avg_merged, avg_ori, avg_merged_ori])
+    csvfile.close()
+
+if __name__ == "__main__" :
+    dumpfile_ori = "output_" + db_name + "/clust_article_dump.pkl"
+    dumpfile_merged = "output_" + db_name + "/new_clust_article_dump.pkl"
+    #main(dumpfile_ori, dumpfile_merged)
+    main_loop()
     
     

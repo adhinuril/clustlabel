@@ -14,6 +14,8 @@ conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', 
 modelname = 'w2v_model/all_articles.w2v'
 output_folder = 'output_' + DB_NAME + '/'
 os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+output_folder_artdumps = 'output_' + DB_NAME + '/article_dumps/'
+os.makedirs(os.path.dirname(output_folder_artdumps), exist_ok=True)
 #PRE-PROCESS OUTPUT
 ARTICLE = output_folder + "article_dump.pkl"
 #CLUSTERING OUTPUT
@@ -21,7 +23,7 @@ SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
 CLUSTER_ORI = output_folder + "cluster_ori.csv"
 CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
 #HIERARCHICAL CLUSTER MERGING OUTPUT
-DIST_MATRIX = output_folder + "dist_matrix.txt"
+DIST_MATRIX = output_folder + "dist_matrix.csv"
 MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
 CLUSTER_MAPPING = output_folder + "cluster_mapping.csv"
 SILHSCORE_MERGED = output_folder + "silhscore_merged.txt"
@@ -53,7 +55,7 @@ def preprocess() :
 
     #return articles_id, articles_content, articles_tokenized
 
-def clustering(w2v_model,articles_id,articles_tokenized,n_clusters) :
+def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=False) :
 
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
@@ -75,13 +77,23 @@ def clustering(w2v_model,articles_id,articles_tokenized,n_clusters) :
                                    clust_articles_content,
                                    centroids,
                                    silhscore_ori)
+    
+    if (looping) :
+        name = (CLUST_ARTICLE.split('/')[1]).split('.')[0]
+        fname = output_folder_artdumps + name + '_' + loop_number +'.pkl'
+        save_to_pickle(fname , clust_articles_id, 
+                               clust_articles_tokenized,
+                               clust_articles_content,
+                               centroids,
+                               silhscore_ori)
+         
 
 def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
-                 clust_articles_tokenized, clust_articles_content, centroids) :
+                 clust_articles_tokenized, clust_articles_content, centroids, looping=False) :
     
     #GENERATE GRAPH DISTANCE MATRIX
-    #cluster_graph = generate_cluster_graph(clust_words, w2v_model)
-    #dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
+    cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
 
     #THE CLUSTER MERGING
@@ -116,7 +128,18 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
                                          new_avg_silh)
     save_to_pickle(CLUST_KEYTOKENS_MERGED, new_clust_words, new_clust_phrases)
 
-def main(n_clusters) :
+    if (looping) :
+        name = (CLUST_ARTICLE_MERGED.split('/')[1]).split('.')[0]
+        fname = output_folder_artdumps + name + '_' + loop_number +'.pkl'
+        save_to_pickle(fname, new_clust_articles_id, 
+                              new_clust_articles_tokenized, 
+                              new_clust_articles_content,
+                              new_avg_silh)
+        name = (CLUSTER_MAPPING.split('/')[1]).split('.')[0]
+        fname = output_folder_artdumps + name + '_' + loop_number +'.csv'
+        output_cluster_mapping(merged_cluster, fname)
+
+def main(n_clusters, looping=False) :
 
     print ("START")
 
@@ -133,7 +156,7 @@ def main(n_clusters) :
     
     #CLUSTERING
     print ("CLUSTERING")
-    clustering(w2v_model,articles_id,articles_tokenized,n_clusters)
+    clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping)
     
     #LOAD PICKLE FROM CLUSTERING
     unpack = load_from_pickle(CLUST_ARTICLE)
@@ -147,7 +170,7 @@ def main(n_clusters) :
     #HIERARCHICAL CLUSTER MERGING
     print("HIERARCHICAL CLUSTER MERGING")
     clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id, 
-                 clust_articles_tokenized,clust_articles_content, centroids)
+                 clust_articles_tokenized,clust_articles_content, centroids, looping)
     
     #LOAD PICKLE FROM CLUSTER MERGING
     unpack = load_from_pickle(CLUST_ARTICLE_MERGED)
@@ -203,8 +226,7 @@ def main(n_clusters) :
 
 def main_n() :
     #PREPARE INPUT AND OUTPUT
-    output_folder = 'output_' + DB_NAME + '/'
-    os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+    clear_folder(output_folder_artdumps,'pkl')
     #PREPARE CSV FILE
     filename = output_folder + 'silhscore_comparison.csv'
     csvfile = open(filename, 'w', newline='')
@@ -222,8 +244,10 @@ def main_n() :
         acc_delta_abs = []
         list_new_n = []
         for i in range(n) :
+            global loop_number
+            loop_number = str(n_clust) + '-' + str(i+1)
             print('N CLUSTER ' + str(n_clust) + ' RUNNING NO-' + str(i+1))
-            silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(n_clust)
+            silhscore_ori, new_n_clust, silhscore_merged, silhscore_reclust = main(n_clust, looping=True)
             delta = silhscore_reclust - silhscore_merged
             delta_abs = abs(delta)
             csvwriter.writerow([str(i+1), n_clust, silhscore_ori, 

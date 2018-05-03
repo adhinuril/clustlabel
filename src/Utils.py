@@ -5,6 +5,7 @@ from nltk.corpus import stopwords
 from tqdm import tqdm
 import pickle
 import re
+import os
 
 def preprocess_text(text) :
     """Clean the text. It remove non-letter,
@@ -86,6 +87,15 @@ def load_from_pickle(picklename) :
     
     #logging.info("Load from pickle File : " + picklename + " [DONE]")
     return unpack
+
+def clear_folder(folderpath,extension) :
+    txtfiles = []
+    for file in os.listdir(folderpath):
+        if file.endswith("." + extension):
+            txtfiles.append(os.path.join(folderpath, file))
+    for f in txtfiles :
+        os.remove(f)
+
 
 if __name__ == "__main__" :
     print ("Utils.py")
