@@ -228,7 +228,7 @@ def main_n() :
     #PREPARE INPUT AND OUTPUT
     clear_folder(output_folder_artdumps,'pkl')
     #PREPARE CSV FILE
-    filename = output_folder + 'silhscore_comparison.csv'
+    filename = output_folder + 'silhscore_loop.csv'
     csvfile = open(filename, 'w', newline='')
     csvwriter = csv.writer(csvfile, delimiter=';')
     csvwriter.writerow(['No', '','Silhouette Score','','','','Delta','Delta (Abs)'])

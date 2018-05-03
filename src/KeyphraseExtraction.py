@@ -164,7 +164,7 @@ def main(dumpfile_ori, dumpfile_merged) :
     folderpath = "documents/"
     outputfile1 = "output_" + db_name + "/keyphrase_pke_ori.txt"
     outputfile2 = "output_" + db_name + "/keyphrase_pke_merged.txt"
-    outputcomparison = "output_" + db_name + "/tcoherence_comparison.csv"
+    outputcomparison = "output_" + db_name + "/clustlabel_comparison.csv"
     
     #KEYPHRASE EXTRACTION BIASA
     load_documents(dumpfile_ori, folderpath)
