@@ -1,6 +1,12 @@
 database name : check
+fullgraph/ prunnedgraph : check
 cluster merging graph/ centroid : check
 cluster merging adaptive threshold : check
 cluster merging graph-distance measure : check
 preprocess neccesity : check
 main_n inputs : check
+main calling in main() : check
+
+- Threshold : adaptive, fixed
+- Distance Measure : v1, v2-weight
+- TopicRank : v1 (boudin), v2 (stercx)
