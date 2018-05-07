@@ -11,6 +11,7 @@ db_name = 'article550'
 input_folder = 'output_' + db_name + '/article_dumps/'
 coherence_loop_output = 'output_' + db_name + '/tcoherence_loop.csv'
 clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
+max_phrase = 5
 
 def extract_keyphrases(extractor) :
     
@@ -41,7 +42,7 @@ def extract_keyphrases(extractor) :
     #extractor.feature_extraction()
 
     # print the n-highest (10) scored candidates
-    return [u for u, v in extractor.get_n_best(n=5)]
+    return [u for u, v in extractor.get_n_best(n=max_phrase)]
 
 def natural_keys(text):
     atoi = lambda c : int(c) if c.isdigit() else c
@@ -215,7 +216,7 @@ def main_loop() :
 if __name__ == "__main__" :
     dumpfile_ori = "output_" + db_name + "/clust_article_dump.pkl"
     dumpfile_merged = "output_" + db_name + "/new_clust_article_dump.pkl"
-    #main(dumpfile_ori, dumpfile_merged)
+    main(dumpfile_ori, dumpfile_merged)
     #main_loop()
     
     
