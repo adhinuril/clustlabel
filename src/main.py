@@ -30,6 +30,7 @@ SILHSCORE_MERGED = output_folder + "silhscore_merged.txt"
 CLUSTER_MERGED = output_folder + "cluster_merged.csv"
 CLUST_ARTICLE_MERGED = output_folder + "new_clust_article_dump.pkl"
 CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
+CLUSTER_GRAPH = output_folder + "cluster_graph_ori.pkl"
 #RE-CLUSTERING OUTPUT
 SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
 #CLUSTER LABELING OUTPUT
@@ -54,6 +55,7 @@ def preprocess() :
     save_to_pickle(ARTICLE, articles_id, articles_tokenized)
 
     #return articles_id, articles_content, articles_tokenized
+
 
 def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=False) :
 
@@ -86,7 +88,7 @@ def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=Fals
                                clust_articles_content,
                                centroids,
                                silhscore_ori)
-         
+
 
 def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
                  clust_articles_tokenized, clust_articles_content, centroids, looping=False) :
@@ -95,9 +97,10 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     cluster_graph = generate_cluster_graph(clust_words, w2v_model)
     dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
+    save_to_pickle(CLUSTER_GRAPH, cluster_graph)
 
     #THE CLUSTER MERGING
-    merged_cluster = hier_cluster_merging(dist_matrix, min_dist, plot=False)
+    merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
     
     #CLUSTER MAPPING
     new_n_clusters = output_cluster_mapping(merged_cluster, CLUSTER_MAPPING)
@@ -138,6 +141,7 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
         name = (CLUSTER_MAPPING.split('/')[1]).split('.')[0]
         fname = output_folder_artdumps + name + '_' + loop_number +'.csv'
         output_cluster_mapping(merged_cluster, fname)
+
 
 def main(n_clusters, looping=False) :
 
@@ -227,6 +231,7 @@ def main(n_clusters, looping=False) :
 def main_n() :
     #PREPARE INPUT AND OUTPUT
     clear_folder(output_folder_artdumps,'pkl')
+    clear_folder(output_folder_artdumps,'csv')
     #PREPARE CSV FILE
     filename = output_folder + 'silhscore_loop.csv'
     csvfile = open(filename, 'w', newline='')
@@ -269,8 +274,40 @@ def main_n() :
 
     csvfile.close()
 
+
+def main_graphtrap(idxa, idxb) :
+
+    #LOAD FILE FROM PICKLE
+    logging.info('Traping Graph Commencing!')
+    unpack = load_from_pickle(CLUSTER_GRAPH)
+    cluster_graph = unpack[0]
+
+    #GENERATE MCS GRAPH
+    graph_a = cluster_graph[idxa - 1]
+    graph_b = cluster_graph[idxb - 1]
+    logging.info('Graph Trapped Succesfully!')
+    logging.info('Generating graph MCS.....')
+    graph_mcs = generate_mcs(graph_a, graph_b)
+
+    #OUTPUT FILE
+    GRAPH_A_NODE = output_folder + 'G' + str(idxa) + '_nodes.csv'
+    GRAPH_A_EDGE = output_folder + 'G' + str(idxa) + '_edges.csv'
+    graph_to_csv(graph_a, GRAPH_A_NODE, GRAPH_A_EDGE)
+
+    GRAPH_B_NODE = output_folder + 'G' + str(idxb) + '_nodes.csv'
+    GRAPH_B_EDGE = output_folder + 'G' + str(idxb) + '_edges.csv'
+    graph_to_csv(graph_b, GRAPH_B_NODE, GRAPH_B_EDGE)
+
+    GRAPH_MCS_NODE = output_folder + 'Gmcs' + str(idxa) + '-'  + str(idxb) +  '_nodes.csv'
+    GRAPH_MCS_EDGE = output_folder + 'Gmcs' + str(idxa) + '-'  + str(idxb) +  '_edges.csv'
+    graph_to_csv(graph_mcs, GRAPH_MCS_NODE, GRAPH_MCS_EDGE)
+
+    logging.info('Graph Traping Completed.')
+    return 0
+
 if __name__ == "__main__" :
     #main_n()
-    #main()
+    #main(11)
+    #main_graphtrap(8,9)
 
     conn.close()
