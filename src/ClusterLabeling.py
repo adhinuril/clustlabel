@@ -113,9 +113,10 @@ def build_graph(nodes, model):
         firstString = pair[0]
         secondString = pair[1]
         #levDistance = levenshtein_distance(firstString, secondString)
-        word2vecSim = word2vec_distance(firstString, secondString, model)
-        #word2vecSim = word2vec_similarity(firstString, secondString, model)
-        gr.add_edge(firstString, secondString, weight=word2vecSim)
+        #word2vecSim = word2vec_distance(firstString, secondString, model)
+        word2vecSim = word2vec_similarity(firstString, secondString, model)
+        if (word2vecSim >= 0.5) :
+            gr.add_edge(firstString, secondString, weight=word2vecSim)
 
     return gr
 

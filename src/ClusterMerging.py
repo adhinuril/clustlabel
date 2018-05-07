@@ -18,6 +18,7 @@ def generate_cluster_graph(clust_words, model) :
         cluster_graph.append(gr)
     return cluster_graph
 
+
 def generate_cluster_graph_v2(clust_words, clust_contents) :
     '''
     v2 : pake graph co-occurence
@@ -34,6 +35,7 @@ def generate_cluster_graph_v2(clust_words, clust_contents) :
         gr = build_graph_cooccurence(clust_words[i], sentences, win)
         cluster_graph.append(gr)
     return cluster_graph
+
 
 def graph_to_csv(G, nfilename, efilename) :
     #open node & edge csv file
@@ -60,6 +62,7 @@ def graph_to_csv(G, nfilename, efilename) :
     edgefile.close()
     logging.info("Graph CSV created successfully!")
 
+
 def generate_mcs(G1,G2) :
     common_nodes = [x for x in tqdm(G1, leave=False, desc='MCS nodes') if x in G2]
     G3 = nx.Graph()
@@ -69,14 +72,18 @@ def generate_mcs(G1,G2) :
         neighbours = list(G1.adj[node_i])
         for node_j in neighbours :
             if (node_i,node_j) in list(G2.edges()) :
+                #print (node_i, '-', node_j)
                 weight_G1 = G1[node_i][node_j]['weight']
-                weight_G2 = G2[node_i][node_j]['weight']
-                min_weight = min([weight_G1, weight_G2])
-                max_weight = min([weight_G1, weight_G2])
-                mcs_weight = min_weight / float(max_weight)
+                #weight_G2 = G2[node_i][node_j]['weight']
+                #print (weight_G1, ', ', weight_G2)
+                #min_weight = min([weight_G1, weight_G2])
+                #max_weight = max([weight_G1, weight_G2])
+                #mcs_weight = min_weight / float(max_weight)
+                mcs_weight = weight_G1
                 G3.add_edge(node_i,node_j, weight=mcs_weight)
     
     return G3
+
 
 def mcs_distance_score(G1,G2, alpha=0.7) :
     G3 = generate_mcs(G1,G2)
@@ -92,6 +99,7 @@ def mcs_distance_score(G1,G2, alpha=0.7) :
 
     dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(g3_e/e_max)) )
     return dist_score
+
 
 def mcs_distance_score_v2(G1,G2, alpha=0.7) :
     '''
@@ -113,6 +121,7 @@ def mcs_distance_score_v2(G1,G2, alpha=0.7) :
     dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(sum_weight/e_max)) )
     return dist_score
 
+
 def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     logging.info("Generating Graph Distance Matrix....")
     n = len(cluster_graph)
@@ -122,8 +131,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
 
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
-            dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
-            #dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
+            #dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
+            dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
             graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
@@ -133,13 +142,11 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     adapt_threshold = mean_dist - std_dist
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
     #adapt_threshold = round(adapt_threshold,2)
-    #logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
-    #with open(graphdistfile,'w') as out :
-    #    out.write(str(graphdist_matrix))
     output_distmatrix_csv(graphdist_matrix, graphdistfile)
 
     return graphdist_matrix, adapt_threshold 
+
 
 def generate_centroiddist_matrix(centroids, centroiddistfile) :
     logging.info("Generating Centroid Distance Matrix....")
@@ -177,7 +184,7 @@ def generate_centroiddist_matrix(centroids, centroiddistfile) :
 def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
     logging.info('Cluster merging [START]')
     X = squareform(graphdist_matrix)
-    Z = linkage(X,'complete')
+    Z = linkage(X,'average')
     fclust = fcluster(Z, min_dist, criterion='distance')
     if (plot) :
         plt.figure()
@@ -187,6 +194,7 @@ def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
     logging.info('Cluster merging [DONE]')
     #logging.info('Merged cluster : ' + str(fclust))
     return fclust
+
 
 def postprocess_cluster_merging(merged_cluster, 
                                 clust_articles_id, 
@@ -232,8 +240,6 @@ def postprocess_cluster_merging(merged_cluster,
     return new_flat_articles_id, new_flat_articles_tokenized, new_flat_cluster_label, \
             new_clust_words, new_clust_phrases, new_clust_articles_id, new_clust_articles_tokenized, new_clust_articles_content
 
-def store_merged_cluster(conn, clust_articles_id, merged_cluster) :
-    curA = conn.cursor(buffered=True)
 
 def output_new_avg_silh(new_n_clusters, new_avg_silh, silhscorefile_new) :
 
@@ -241,6 +247,7 @@ def output_new_avg_silh(new_n_clusters, new_avg_silh, silhscorefile_new) :
     logging.info('For n_clusters = ' + str(new_n_clusters) + ' The new average silhouette score : ' + str(new_avg_silh))
     with open(silhscorefile_new,'w') as f :
         f.write('New Silhouette Score : ' + str(new_avg_silh))
+
 
 def output_cluster_mapping(merged_cluster, clustmapfile) :
     n_clust = len(merged_cluster)
@@ -270,6 +277,7 @@ def output_cluster_mapping(merged_cluster, clustmapfile) :
 
     logging.info(str(n_merged_ori_clusters) + " original clusters merged to " + str(n_new_clusters) + " new clusters")
     return new_n_clust
+
 
 def output_distmatrix_csv(matrix, distfile) :
     shape = matrix.shape[0]

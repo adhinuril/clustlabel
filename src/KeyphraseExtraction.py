@@ -216,6 +216,6 @@ if __name__ == "__main__" :
     dumpfile_ori = "output_" + db_name + "/clust_article_dump.pkl"
     dumpfile_merged = "output_" + db_name + "/new_clust_article_dump.pkl"
     #main(dumpfile_ori, dumpfile_merged)
-    main_loop()
+    #main_loop()
     
     
