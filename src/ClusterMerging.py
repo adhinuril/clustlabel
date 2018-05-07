@@ -181,15 +181,16 @@ def generate_centroiddist_matrix(centroids, centroiddistfile) :
     return centroiddist_matrix, adapt_threshold 
     
 
-def hier_cluster_merging(graphdist_matrix, min_dist, plot=False) :
+def hier_cluster_merging(graphdist_matrix, min_dist, mergefile) :
     logging.info('Cluster merging [START]')
     X = squareform(graphdist_matrix)
     Z = linkage(X,'average')
     fclust = fcluster(Z, min_dist, criterion='distance')
-    if (plot) :
-        plt.figure()
-        dn = dendrogram(Z)
-        plt.show()
+    
+    plt.figure()
+    dn = dendrogram(Z)
+    #plt.show()
+    plt.savefig(mergefile)
     
     logging.info('Cluster merging [DONE]')
     #logging.info('Merged cluster : ' + str(fclust))

@@ -31,6 +31,7 @@ CLUSTER_MERGED = output_folder + "cluster_merged.csv"
 CLUST_ARTICLE_MERGED = output_folder + "new_clust_article_dump.pkl"
 CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
 CLUSTER_GRAPH = output_folder + "cluster_graph_ori.pkl"
+DENDOGRAM = output_folder + "dendogram.png"
 #RE-CLUSTERING OUTPUT
 SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
 #CLUSTER LABELING OUTPUT
@@ -100,7 +101,7 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     save_to_pickle(CLUSTER_GRAPH, cluster_graph)
 
     #THE CLUSTER MERGING
-    merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, plot=False)
+    merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, DENDOGRAM)
     
     #CLUSTER MAPPING
     new_n_clusters = output_cluster_mapping(merged_cluster, CLUSTER_MAPPING)
@@ -275,11 +276,11 @@ def main_n() :
     csvfile.close()
 
 
-def main_graphtrap(idxa, idxb) :
+def main_graphtrap(clustgraph, idxa, idxb) :
 
     #LOAD FILE FROM PICKLE
     logging.info('Traping Graph Commencing!')
-    unpack = load_from_pickle(CLUSTER_GRAPH)
+    unpack = load_from_pickle(clustgraph)
     cluster_graph = unpack[0]
 
     #GENERATE MCS GRAPH
@@ -305,9 +306,11 @@ def main_graphtrap(idxa, idxb) :
     logging.info('Graph Traping Completed.')
     return 0
 
+
 if __name__ == "__main__" :
     #main_n()
-    #main(11)
-    #main_graphtrap(8,9)
+    main(11)
+    CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P4.pkl'
+    #main_graphtrap(CLUSTER_GRAPH, 5,8)
 
     conn.close()
