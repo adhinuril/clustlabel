@@ -20,6 +20,7 @@ import scipy as sp
 from tqdm import tqdm
 from sklearn.feature_extraction.text import CountVectorizer
 from Utils import *
+from pytopicrank import TopicRank
 
 
 def setup_environment():
@@ -28,13 +29,16 @@ def setup_environment():
     nltk.download('averaged_perceptron_tagger')
     print('Completed resource downloads.')
 
+
 def filter_for_tags(tagged, tags=['NN', 'JJ', 'NNP']):
     """Apply syntactic filters based on POS tags."""
     return [item for item in tagged if item[1] in tags]
 
+
 def normalize(tagged):
     """Return a list of tuples with the first item's periods removed."""
     return [(item[0].replace('.', ''), item[1]) for item in tagged]
+
 
 def unique_everseen(iterable, key=None):
     """List unique elements in order of appearance.
@@ -55,6 +59,7 @@ def unique_everseen(iterable, key=None):
             if k not in seen:
                 seen_add(k)
                 yield element
+
 
 def levenshtein_distance(first, second):
     """Return the Levenshtein distance between two strings.
@@ -87,6 +92,7 @@ def word2vec_similarity(first, second, w2v_model) :
         word_sim = 0
     return word_sim
 
+
 def word2vec_distance(first, second, w2v_model) :
     words = list(w2v_model.wv.vocab)
 
@@ -95,7 +101,6 @@ def word2vec_distance(first, second, w2v_model) :
     else :
         word_dist = 1
     return word_dist
-
 
 
 def build_graph(nodes, model):
@@ -119,6 +124,7 @@ def build_graph(nodes, model):
             gr.add_edge(firstString, secondString, weight=word2vecSim)
 
     return gr
+
 
 def build_graph_cooccurence(nodes, sentences, win) :
     """Generate word co-occurence count matrix, with windows n words.
@@ -164,7 +170,6 @@ def build_graph_cooccurence(nodes, sentences, win) :
                     Gtext[word][neighword]['weight'] += 1.0
 
     return Gtext
-
 
 
 def extract_key_phrases(word_tokens, model):
@@ -233,6 +238,7 @@ def extract_key_phrases(word_tokens, model):
     '''
     return keyphrases
 
+
 def extract_key_phrases_v2(word_set_list, model):
     """Return a set of key phrases.
 
@@ -251,6 +257,7 @@ def extract_key_phrases_v2(word_set_list, model):
                         reverse=True)
 
     return keyphrases
+
 
 def extract_key_phrases_cooccurence(nodes, sentences, win) :
     """Return a set of key phrases.
@@ -272,7 +279,6 @@ def extract_key_phrases_cooccurence(nodes, sentences, win) :
     return keyphrases
 
 
-
 def cluster_labeling(clust_text, clust_phrases, w2v_model) :
     logging.info('Cluster labeling.....')
     clust_keyphrases = []
@@ -291,6 +297,7 @@ def cluster_labeling(clust_text, clust_phrases, w2v_model) :
                 clust_keyphrases[i].append(phrase)
 
     return clust_keywords, clust_keyphrases
+
 
 def cluster_labeling_v2(clust_text, clust_phrases, w2v_model, max_phrase) :
     logging.info('Cluster labeling.....')
@@ -329,6 +336,7 @@ def cluster_labeling_v2(clust_text, clust_phrases, w2v_model, max_phrase) :
                 break
     
     return clust_keywords, clust_keyphrases
+
 
 def cluster_labeling_cooccurence(clust_words, clust_phrases, clust_contents, max_phrase) :
     logging.info('Cluster labeling [START]')
@@ -370,8 +378,6 @@ def cluster_labeling_cooccurence(clust_words, clust_phrases, clust_contents, max
     return clust_keywords, clust_keyphrases
 
 
-
-
 def extract_sentences(text) :
     """Split text into sentences.
 
@@ -401,6 +407,7 @@ def extract_sentences(text) :
 
     return sentences
 
+
 def extract_imp_sentences(text, summary_length=100, clean_sentences=False, language='english'):
     """Return a paragraph formatted summary of the source text.
 
@@ -429,6 +436,7 @@ def extract_imp_sentences(text, summary_length=100, clean_sentences=False, langu
 
     return summary
 
+
 def write_files(summary, key_phrases, filename):
     """Write key phrases and summaries to a file."""
     print("Generating output to " + 'keywords/' + filename)
@@ -443,6 +451,7 @@ def write_files(summary, key_phrases, filename):
     summary_file.close()
 
     print("-")
+
 
 def summarize_all():
     # retrieve each of the articles
@@ -481,3 +490,24 @@ def cluster_word_filter(documents, min_avg_count) :
     big_text = " ".join(imp_words)
     return big_text
 
+
+def topic_rank(text, n) :
+    tr = TopicRank(text)
+    keyphrase = tr.get_top_n(n=n)
+    return keyphrase
+
+
+def cluster_labeling_topicrank(clust_contents, max_phrase) :
+    clust_keyphrases = []
+    for clust_text in tqdm(clust_contents) :
+        text = ' '.join(clust_text)
+        keyphrases = topic_rank(text, max_phrase)
+        clust_keyphrases.append(keyphrases)
+    
+    return clust_keyphrases
+
+
+if __name__ == "__main__" :
+    text = 'Keyphrase extraction is the task of identifying single or multi-word expressions that represent the main topics of a document. In this paper we present TopicRank, a graph-based keyphrase extraction method that relies on a topical representation of the document. Candidate keyphrases are clustered into topics and used as vertices in a complete graph. A graph-based ranking model is applied to assign a significance score to each topic. Keyphrases are then generated by selecting a candidate from each of the topranked topics. We conducted experiments on four evaluation datasets of different languages and domains. Results show that TopicRank significantly outperforms state-of-the-art methods on three datasets.'
+    text = 2
+    print(topic_rank(text, 3))
