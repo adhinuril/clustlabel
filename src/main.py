@@ -9,7 +9,7 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'article550'
+DB_NAME = 'article_ieee'
 conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
 modelname = 'w2v_model/all_articles.w2v'
 output_folder = 'output_' + DB_NAME + '/'
@@ -22,6 +22,7 @@ ARTICLE = output_folder + "article_dump.pkl"
 SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
 CLUSTER_ORI = output_folder + "cluster_ori.csv"
 CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
+ELBOWFILE = output_folder + "elbow_analysis.png"
 #HIERARCHICAL CLUSTER MERGING OUTPUT
 DIST_MATRIX = output_folder + "dist_matrix.csv"
 MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
@@ -32,6 +33,7 @@ CLUST_ARTICLE_MERGED = output_folder + "new_clust_article_dump.pkl"
 CLUST_KEYTOKENS_MERGED = output_folder + "new_clust_keytokens_dump.pkl"
 CLUSTER_GRAPH = output_folder + "cluster_graph_ori.pkl"
 DENDOGRAM = output_folder + "dendogram.png"
+MCSPERCENT_MATRIX = output_folder + "mcspercent_matrix.pkl"
 #RE-CLUSTERING OUTPUT
 SILHSCORE_RECLUST = output_folder + "silhscore_reclustering.txt"
 #CLUSTER LABELING OUTPUT
@@ -59,7 +61,7 @@ def preprocess() :
 
 
 def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=False) :
-
+    
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
@@ -96,7 +98,7 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     
     #GENERATE GRAPH DISTANCE MATRIX
     cluster_graph = generate_cluster_graph(clust_words, w2v_model)
-    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX)
+    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX, MCSPERCENT_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
     save_to_pickle(CLUSTER_GRAPH, cluster_graph)
 
@@ -144,13 +146,41 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
         output_cluster_mapping(merged_cluster, fname)
 
 
+def reclustering(w2v_model, articles_tokenized, new_clust_articles_id) :
+    new_n_clusters = len(new_clust_articles_id)
+    cluster_labels_reclust, centroids_reclust, \
+    silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
+                                                                articles_tokenized,
+                                                                new_n_clusters,
+                                                                SILHSCORE_RECLUST,
+                                                                False)
+    return new_n_clusters, silhscore_reclust
+
+
+def clustlabeling(new_clust_words, new_clust_phrases, new_clust_articles_content) :
+    #clust_keywords2, clust_keyphrases2 = cluster_labeling_cooccurence(new_clust_words, 
+    #                                                                  new_clust_phrases, 
+    #                                                                  new_clust_articles_content,
+    #                                                                  max_phrase)                                                      
+
+    clust_keyphrases = cluster_labeling_topicrank(new_clust_articles_content, max_phrase)
+
+    #OUTPUT
+    fout = open(KEYPHRASE,'w')
+    for i in range(len(clust_keyphrases)) :
+        fout.write('Cluster-' + str(i+1) + ' :\n')
+        fout.write('Phrases :\n')
+        fout.write(str(clust_keyphrases[i]) + '\n\n')
+    fout.close()
+
+
 def main(n_clusters, looping=False) :
 
     print ("START")
 
     #PREPROCESS
     print ("PRE-PROCESS")
-    #preprocess()
+    preprocess()
     #LOAD PICKLE FROM PREPROCESS
     unpack = load_from_pickle(ARTICLE)
     articles_id, articles_tokenized = unpack[0], unpack[1]
@@ -161,6 +191,7 @@ def main(n_clusters, looping=False) :
     
     #CLUSTERING
     print ("CLUSTERING")
+    #elbow_analysis(articles_tokenized,w2v_model,ELBOWFILE) #if this on, then it ends here.
     clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping)
     
     #LOAD PICKLE FROM CLUSTERING
@@ -186,47 +217,14 @@ def main(n_clusters, looping=False) :
 
     #RE-CLUSTERING WITH NEW CLUSTER NUMBER
     print("RE-CLUSTERING")
-    new_n_clusters = len(new_clust_articles_id)
-    cluster_labels_reclust, centroids_reclust, \
-    silhscore_reclust ,sample_silhouette_values_reclust = cluster_word2vec(w2v_model,
-                                                                articles_tokenized,
-                                                                new_n_clusters,
-                                                                SILHSCORE_RECLUST,
-                                                                False)
+    #new_n_clusters, silhscore_reclust = reclustering(w2v_model, articles_tokenized, new_clust_articles_id)
 
-    '''
-    print("CLUSTER LABELING")
     #CLUSTER LABELING
-    clust_keywords2, clust_keyphrases2 = cluster_labeling_cooccurence(new_clust_words, 
-                                                                      new_clust_phrases, 
-                                                                      new_clust_articles_content,
-                                                                      max_phrase)
-    #clust_keywords1, clust_keyphrases1 = cluster_labeling_v2(new_clust_articles_tokenized, 
-    #                                                       new_clust_phrases, 
-    #                                                       w2v_model,
-    #                                                       max_phrase)                                                           
-
-    #OUTPUT
-    fout = open(KEYPHRASE,'w')
-    for i in range(len(clust_keywords2)) :
-        fout.write('Cluster-' + str(i+1) + ' :\n')
-        fout.write('Phrases :\n')
-        fout.write(str(new_clust_phrases[i]) + '\n')
-        #fout.write('Words :' + str(len(new_clust_words[i])) + '\n')
-        #fout.write(str(new_clust_words[i]) + '\n\n')
-
-        #fout.write('Keywords (w2v) :' + str(len(clust_keywords1[i])) + '\n')
-        #fout.write(str(clust_keywords1[i]) + '\n')
-        #fout.write('Keyphrases (w2v) :\n')
-        #fout.write(str(clust_keyphrases1[i]) + '\n\n')
-        
-        fout.write('Keywords (cooccurence) :\n')
-        fout.write(str(clust_keywords2[i]) + '\n')
-        fout.write('Keyphrases (cooccurence) :\n')
-        fout.write(str(clust_keyphrases2[i]) + '\n\n')
-    fout.close()
-    '''
-    return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
+    print("CLUSTER LABELING")
+    #clustlabeling(new_clust_words, new_clust_phrases, new_clust_articles_content)
+    
+    if (looping) :
+        return silhscore_ori, new_n_clusters, new_avg_silh, silhscore_reclust
     
 
 def main_n() :
@@ -310,7 +308,7 @@ def main_graphtrap(clustgraph, idxa, idxb) :
 if __name__ == "__main__" :
     #main_n()
     main(11)
-    CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P4.pkl'
-    #main_graphtrap(CLUSTER_GRAPH, 5,8)
+    #CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P5.pkl'
+    #main_graphtrap(CLUSTER_GRAPH, 9,11)
 
     conn.close()

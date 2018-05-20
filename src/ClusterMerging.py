@@ -9,6 +9,7 @@ from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy.spatial.distance import squareform
 from sklearn.metrics.pairwise import cosine_distances
 import matplotlib.pyplot as plt
+from Utils import *
 
 def generate_cluster_graph(clust_words, model) :
     logging.info('Generating Graph....')
@@ -119,23 +120,27 @@ def mcs_distance_score_v2(G1,G2, alpha=0.7) :
     sum_weight = sum(mcs_weights)
 
     dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(sum_weight/e_max)) )
-    return dist_score
+    n_percent = (g3_n / n_max) * 100
+    return dist_score, n_percent
 
 
-def generate_graphdist_matrix(cluster_graph, graphdistfile) :
+def generate_graphdist_matrix(cluster_graph, graphdistfile, mcspercentfile) :
     logging.info("Generating Graph Distance Matrix....")
     n = len(cluster_graph)
     graphdist_matrix = np.zeros((n,n))
+    mcspercent_matrix = np.zeros((n,n))
 
     graphdistances = []
 
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
             #dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
-            dist = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
+            dist, n_percent = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
             graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
+            mcspercent_matrix[i][j] = n_percent
+            mcspercent_matrix[j][i] = n_percent
 
     mean_dist = np.mean(graphdistances)
     std_dist = np.std(graphdistances)
@@ -143,7 +148,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile) :
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
     #adapt_threshold = round(adapt_threshold,2)
 
-    output_distmatrix_csv(graphdist_matrix, graphdistfile)
+    output_distmatrix_csv(graphdist_matrix, mcspercent_matrix, graphdistfile)
+    save_to_pickle(mcspercentfile, mcspercent_matrix)
 
     return graphdist_matrix, adapt_threshold 
 
@@ -280,18 +286,32 @@ def output_cluster_mapping(merged_cluster, clustmapfile) :
     return new_n_clust
 
 
-def output_distmatrix_csv(matrix, distfile) :
-    shape = matrix.shape[0]
+def output_distmatrix_csv(distmatrix, mcspmatrix, distfile) :
+    shape = distmatrix.shape[0]
 
     with open(distfile, 'w', newline='') as csvfile :
         csvwriter = csv.writer(csvfile, delimiter=';')
 
+        #WRITING DISTANCE MATRIX
         toprow = ['']
         toprow.extend([str(i+1) for i in range(shape)])
         csvwriter.writerow(toprow)
 
         for i in range(shape) :
             row = [str(i+1)]
-            row.extend([dist for dist in matrix[i]])
+            row.extend([dist for dist in distmatrix[i]])
+            csvwriter.writerow(row)
+        
+        csvwriter.writerow([''])
+        csvwriter.writerow([''])
+
+        #WRITING MCS PERCENTAGE MATRIX
+        toprow = ['']
+        toprow.extend([str(i+1) for i in range(shape)])
+        csvwriter.writerow(toprow)
+
+        for i in range(shape) :
+            row = [str(i+1)]
+            row.extend([percent for percent in mcspmatrix[i]])
             csvwriter.writerow(row)
 

@@ -1,11 +1,11 @@
-database name : check
-fullgraph/ prunnedgraph : check
-cluster merging graph/ centroid : check
-cluster merging adaptive threshold : check
-cluster merging graph-distance measure : check
-preprocess neccesity : check
-main_n inputs : check
-main calling in main() : check
+database name : check -> main.py/global
+fullgraph/ prunnedgraph : check -> main.py/global
+cluster merging graph/ centroid : check -> main.py/clustmerging()
+cluster merging adaptive threshold : check -> main.py/clustmerging()
+cluster merging graph-distance measure : check -> ClusterMerging.py/generate_graphdist_matrix()
+preprocess neccesity : check -> main.py
+main_n inputs : check -> main_n.py
+main calling in main() : check -> __main__
 
 - Threshold : adaptive, fixed
 - Distance Measure : v1, v2-weight

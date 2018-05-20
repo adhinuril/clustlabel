@@ -58,7 +58,7 @@ def generate_keyphrases_files(inputfolder, outputfile) :
     tc_scores = []
     clust_files.sort(key=natural_keys)
 
-    for fin in tqdm(clust_files, leave=False) :
+    for fin in tqdm(clust_files, leave=False, desc='Clusters') :
         basename = os.path.splitext(fin)[0]
         clustname = basename.split('/')[1]
         extractor = keypex(input_file=fin)
@@ -82,8 +82,10 @@ def load_documents(dumpfile, outfolder) :
     unpack = load_from_pickle(dumpfile)
     clust_articles_id, clust_articles_tokenized, clust_articles_content = unpack[0], unpack[1], unpack[2]
     clear_folder(outfolder,'txt')
+    clust_sizes = []
 
     for i in range(len(clust_articles_content)) :
+        clust_sizes.append(len(clust_articles_content[i]))
         filename = outfolder + "Cluster" + str(i+1) + ".txt"
         f = open(filename,'w')
         for doc in clust_articles_content[i] :
@@ -93,6 +95,8 @@ def load_documents(dumpfile, outfolder) :
             except UnicodeEncodeError :
                 f.write(text.encode('utf-8') + b"n")
         f.close()
+    
+    return clust_sizes
 
 def load_documents_fpm(dumpfile, dumpkeytokensfile, outfolder) :
     unpack1 = load_from_pickle(dumpfile)
@@ -125,35 +129,63 @@ def clustermapping_generate() :
                 clustmap[new_clust].append(old_clust)
     return clustmap
 
-def output_topic_coherence(outputfile, keyphrases_list_ori, keyphrases_list_merged, 
+def mcspercent_string(mcspercent_matrix, oldclust_index) :
+    mp_string = ''
+    for i in range(len(oldclust_index) - 1) :
+        for j in range(i+1, len(oldclust_index)) :
+            clust_idxA = oldclust_index[i]
+            clust_idxB = oldclust_index[j]
+            percentage = mcspercent_matrix[clust_idxA-1][clust_idxB-1]
+            percentage = round(percentage,2)
+            mp_string += str(clust_idxA) + '-' + str(clust_idxB) + ' : ' + \
+                         str(percentage) + '%\n'
+    return mp_string
+
+def output_topic_coherence(outputfile, mcspercentfile, 
+                           ori_clustsize, merged_clustsize,
+                           keyphrases_list_ori, keyphrases_list_merged, 
                            tc_scores_ori, tc_scores_merged) :
+    #LOAD CLUSTER MAPPING FILE
     clustmap = clustermapping_generate()
     sorted(clustmap)
+
+    #COLLECT ACCUMULATION OF OLD-CLUST AVG COHERENCE SCORES
     merged_ori_cluster_tscores = []
+    
+    #COLLECT MCS PERCENTAGE MATRIX OF OLD CLUSTERS
+    unpack = load_from_pickle(mcspercentfile)
+    mcspercent_matrix = unpack[0]
+
+    #WRITING TO CSV
     with open(outputfile, 'wb') as csvfile :
         csvwriter = csv.writer(csvfile, delimiter=';')
-        csvwriter.writerow(['New Cluster','','Coherence','Original Cluster','','Coherence'])
+        csvwriter.writerow(['New Cluster','','Coherence','#Doc',
+                            'Original Cluster','','Coherence','#Doc',
+                            'Merged Coherence','MCS Percentage'])
+        #FOR EVERY NEW CLUSTER
         for new_clust in clustmap :
             n_old_clusts = len(clustmap[new_clust])
-            old_clusts_tcscores = [tc_scores_ori[x-1] for x in clustmap[new_clust]]
-            avg_tscores_ori = sum(old_clusts_tcscores) / float(len(old_clusts_tcscores))
+            old_clusts_tcscores = [tc_scores_ori[x-1] for x in clustmap[new_clust]]         #COLLECT OLD CLUSTER COMPONENTS SCORES
+            avg_tscores_ori = sum(old_clusts_tcscores) / float(len(old_clusts_tcscores))    #AVERAGED THE COHERENCE SCORE
             merged_ori_cluster_tscores.append(avg_tscores_ori)
+            mcspercent = mcspercent_string(mcspercent_matrix, clustmap[new_clust])
             counter = 0
+            #FOR EVERY OLD COLUSTER COMPONENTS
             for old_clust in clustmap[new_clust] :
                 if counter == 0 :
                     csvwriter.writerow([str(new_clust),str(keyphrases_list_merged[new_clust-1]),
-                                        str(tc_scores_merged[new_clust-1]),
+                                        str(tc_scores_merged[new_clust-1]), str(merged_clustsize[new_clust-1]),
                                         str(old_clust), str(keyphrases_list_ori[old_clust-1]),
-                                        str(tc_scores_ori[old_clust-1]),
-                                        str(avg_tscores_ori)])
+                                        str(tc_scores_ori[old_clust-1]), str(ori_clustsize[old_clust-1]),
+                                        str(avg_tscores_ori), mcspercent])
                     counter += 1
                 else :
-                    csvwriter.writerow(['','','',
+                    csvwriter.writerow(['','','','',
                                         str(old_clust),str(keyphrases_list_ori[old_clust-1]),
                                         str(tc_scores_ori[old_clust-1])])
-        avg_merged = sum(tc_scores_merged) / float(len(tc_scores_merged))
-        avg_ori = sum(tc_scores_ori) / float(len(tc_scores_ori))
-        avg_merged_ori = sum(merged_ori_cluster_tscores) / float(len(merged_ori_cluster_tscores))
+        avg_merged = sum(tc_scores_merged) / float(len(tc_scores_merged))       #AVERAGE NEW-CLUST COHERENCE
+        avg_ori = sum(tc_scores_ori) / float(len(tc_scores_ori))                #AVERAGE OLD CLUST COHERENCE
+        avg_merged_ori = sum(merged_ori_cluster_tscores) / float(len(merged_ori_cluster_tscores))   #AVERAGE MERGED OLD-CLUST COHERENCE
         csvwriter.writerow(['','',avg_merged,'','',avg_ori, avg_merged_ori])
         print 'avg_merged : ', avg_merged
         print 'avg_ori : ', avg_ori
@@ -166,16 +198,18 @@ def main(dumpfile_ori, dumpfile_merged) :
     outputfile1 = "output_" + db_name + "/keyphrase_pke_ori.txt"
     outputfile2 = "output_" + db_name + "/keyphrase_pke_merged.txt"
     outputcomparison = "output_" + db_name + "/clustlabel_comparison.csv"
+    mcspercentfile = "output_" + db_name + "/mcspercent_matrix.pkl"
     
-    #KEYPHRASE EXTRACTION BIASA
-    load_documents(dumpfile_ori, folderpath)
+    #GENERATE KEYPHRASE
+    ori_clustsize = load_documents(dumpfile_ori, folderpath)
     keyphrases_ori, tcscores_ori = generate_keyphrases_files(folderpath, outputfile1)
     logging.info('Cluster labeling original cluster [DONE]')
-    load_documents(dumpfile_merged, folderpath)
+    merged_clustsize = load_documents(dumpfile_merged, folderpath)
     keyphrases_merged, tcscores_merged = generate_keyphrases_files(folderpath, outputfile2)
     logging.info('Cluster labeling merged cluster [DONE]')
     
-    avg_merged, avg_ori, avg_merged_ori = output_topic_coherence(outputcomparison,
+    avg_merged, avg_ori, avg_merged_ori = output_topic_coherence(outputcomparison, mcspercentfile,
+                                                                 ori_clustsize, merged_clustsize,
                                                                  keyphrases_ori, keyphrases_merged,
                                                                  tcscores_ori, tcscores_merged)
     logging.info('Finished.')
