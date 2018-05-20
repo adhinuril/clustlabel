@@ -10,6 +10,7 @@ from sklearn.metrics import silhouette_samples, silhouette_score
 import csv
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import pandas as pd
 from Utils import *
 
 def fetch_data(curA, text='all') :
@@ -87,6 +88,27 @@ def calculate_silhouette(article_matrix, cluster_labels) :
     silhouette_avg = silhouette_score(article_matrix,cluster_labels)
     sample_silhouette_values = silhouette_samples(article_matrix, cluster_labels)
     return silhouette_avg, sample_silhouette_values
+
+def elbow_analysis(articles_tokenized, w2v_model, elbowfile, n_max=30) :
+    logging.info("Elbow Analysis Commencing...")
+    article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
+    cluster_range = range( 2, n_max )
+    cluster_errors = []
+    for num_clusters in tqdm(cluster_range) :
+        km = KMeans(n_clusters=num_clusters, init='k-means++', max_iter=100, n_init=1,
+                    verbose=False) #Print progress reports inside k-means algorithm
+        idx = km.fit(article_matrix)
+        error_rate = km.inertia_
+        cluster_errors.append(error_rate)
+    
+    clusters_df = pd.DataFrame( { "num_clusters":cluster_range, "cluster_errors": cluster_errors } )
+    plt.xlabel('k-Clusters')
+    plt.ylabel('Clustering Errors')
+    plt.figure(figsize=(12,6))
+    plt.xticks(clusters_df.num_clusters)
+    plt.plot( clusters_df.num_clusters, clusters_df.cluster_errors, marker = "o" )
+    plt.savefig(elbowfile)
+    raise SystemExit
 
 def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
     
