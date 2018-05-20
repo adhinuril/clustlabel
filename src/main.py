@@ -11,7 +11,7 @@ import csv
 #PREPARE THE OUTPUT
 DB_NAME = 'article_ieee'
 conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
-modelname = 'w2v_model/all_articles.w2v'
+modelname = 'w2v_model/article_ieee.w2v'
 output_folder = 'output_' + DB_NAME + '/'
 os.makedirs(os.path.dirname(output_folder), exist_ok=True)
 output_folder_artdumps = 'output_' + DB_NAME + '/article_dumps/'
@@ -174,7 +174,7 @@ def clustlabeling(new_clust_words, new_clust_phrases, new_clust_articles_content
     fout.close()
 
 
-def main(n_clusters, looping=False) :
+def main(n_clusters=17, looping=False) :
 
     print ("START")
 
@@ -186,12 +186,12 @@ def main(n_clusters, looping=False) :
     articles_id, articles_tokenized = unpack[0], unpack[1]
 
     #LOAD WORD2VEC MODEL
-    #train_word2vec(articles_tokenized, modelname)
+    #train_word2vec(articles_tokenized, modelname)   #if this on, then it ends here.
     w2v_model = load_word2vec(modelname)
     
     #CLUSTERING
     print ("CLUSTERING")
-    #elbow_analysis(articles_tokenized,w2v_model,ELBOWFILE) #if this on, then it ends here.
+    #elbow_analysis(articles_tokenized,w2v_model,ELBOWFILE)     #if this on, then it ends here.
     clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping)
     
     #LOAD PICKLE FROM CLUSTERING
@@ -216,11 +216,11 @@ def main(n_clusters, looping=False) :
     new_clust_words, new_clust_phrases = unpack[0], unpack[1]
 
     #RE-CLUSTERING WITH NEW CLUSTER NUMBER
-    print("RE-CLUSTERING")
+    #print("RE-CLUSTERING")
     #new_n_clusters, silhscore_reclust = reclustering(w2v_model, articles_tokenized, new_clust_articles_id)
 
     #CLUSTER LABELING
-    print("CLUSTER LABELING")
+    #print("CLUSTER LABELING")
     #clustlabeling(new_clust_words, new_clust_phrases, new_clust_articles_content)
     
     if (looping) :
@@ -307,7 +307,7 @@ def main_graphtrap(clustgraph, idxa, idxb) :
 
 if __name__ == "__main__" :
     #main_n()
-    main(11)
+    main()
     #CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P5.pkl'
     #main_graphtrap(CLUSTER_GRAPH, 9,11)
 

@@ -67,6 +67,7 @@ def collecting_data(conn, text='all') :
 def train_word2vec(articles_tokenized, modelname="trained_model.w2v") :
     w2v_model = models.Word2Vec(articles_tokenized, min_count=1)
     w2v_model.save(modelname)
+    raise SystemExit
 
 def load_word2vec(modelname) :
     return models.Word2Vec.load(modelname)
@@ -93,21 +94,37 @@ def elbow_analysis(articles_tokenized, w2v_model, elbowfile, n_max=30) :
     logging.info("Elbow Analysis Commencing...")
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
     cluster_range = range( 2, n_max )
+    silh_scores = []
     cluster_errors = []
     for num_clusters in tqdm(cluster_range) :
         km = KMeans(n_clusters=num_clusters, init='k-means++', max_iter=100, n_init=1,
                     verbose=False) #Print progress reports inside k-means algorithm
         idx = km.fit(article_matrix)
+        cluster_labels = km.labels_.tolist()
         error_rate = km.inertia_
         cluster_errors.append(error_rate)
+        silhouette_avg, sample_silhouette_values = calculate_silhouette(article_matrix,cluster_labels)
+        silhouette_avg = round(silhouette_avg, 4)
+        silh_scores.append(silhouette_avg)
     
+    #Find the largest silhouette score
+    max_silh = silh_scores[0]
+    max_silh_idx = 0
+    print(silh_scores)
+    for i in range(len(cluster_range)) :
+        if silh_scores[i] > max_silh :
+            max_silh = silh_scores[i]
+            max_silh_idx = cluster_range[i] 
+
     clusters_df = pd.DataFrame( { "num_clusters":cluster_range, "cluster_errors": cluster_errors } )
+    plt.title('Elbow Analysis (Optimal = ' + str(max_silh_idx) + ')')
     plt.xlabel('k-Clusters')
     plt.ylabel('Clustering Errors')
     plt.figure(figsize=(12,6))
     plt.xticks(clusters_df.num_clusters)
     plt.plot( clusters_df.num_clusters, clusters_df.cluster_errors, marker = "o" )
     plt.savefig(elbowfile)
+    logging.info('Optimal k = ' + str(max_silh_idx) + ', score = ' + str(max_silh))
     raise SystemExit
 
 def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
