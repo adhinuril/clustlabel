@@ -7,7 +7,7 @@ import re
 import os
 
 #GLOBAL
-db_name = 'article550'
+db_name = 'article_ieee'
 input_folder = 'output_' + db_name + '/article_dumps/'
 coherence_loop_output = 'output_' + db_name + '/tcoherence_loop.csv'
 clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
@@ -182,7 +182,7 @@ def output_topic_coherence(outputfile, mcspercentfile,
                 else :
                     csvwriter.writerow(['','','','',
                                         str(old_clust),str(keyphrases_list_ori[old_clust-1]),
-                                        str(tc_scores_ori[old_clust-1])])
+                                        str(tc_scores_ori[old_clust-1]), str(ori_clustsize[old_clust-1])])
         avg_merged = sum(tc_scores_merged) / float(len(tc_scores_merged))       #AVERAGE NEW-CLUST COHERENCE
         avg_ori = sum(tc_scores_ori) / float(len(tc_scores_ori))                #AVERAGE OLD CLUST COHERENCE
         avg_merged_ori = sum(merged_ori_cluster_tscores) / float(len(merged_ori_cluster_tscores))   #AVERAGE MERGED OLD-CLUST COHERENCE

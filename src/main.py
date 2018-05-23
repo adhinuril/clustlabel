@@ -96,11 +96,16 @@ def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=Fals
 def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
                  clust_articles_tokenized, clust_articles_content, centroids, looping=False) :
     
-    #GENERATE GRAPH DISTANCE MATRIX
+    #GENERATE GRAPH MATRIX
     cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+
+    #GENERATE GRAPH DISTANCE MATRIX
     dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX, MCSPERCENT_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
-    save_to_pickle(CLUSTER_GRAPH, cluster_graph)
+    
+    save_to_pickle(CLUSTER_GRAPH, cluster_graph, dist_matrix)
+    #unpack = load_from_pickle(CLUSTER_GRAPH)
+    #cluster_graph, dist_matrix = unpack[0], unpack[1]
 
     #THE CLUSTER MERGING
     merged_cluster = hier_cluster_merging(dist_matrix, adapt_threshold, DENDOGRAM)
@@ -124,8 +129,8 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     output_new_avg_silh(new_n_clusters, new_avg_silh, SILHSCORE_MERGED)
 
     #STORE NEW CLUSTER LABEL TO DATABASE & CREATE CSV FILE
-    store_cluster_label(conn, new_flat_articles_id, new_flat_cluster_label, new_samples_silh)
-    cluster_tocsv(conn, CLUSTER_MERGED)
+    #store_cluster_label(conn, new_flat_articles_id, new_flat_cluster_label, new_samples_silh)
+    #cluster_tocsv(conn, CLUSTER_MERGED)
 
     #SAVE FILE TO PICKLE HIERARCHICAL CLUSTER MERGING
     save_to_pickle(CLUST_ARTICLE_MERGED, new_clust_articles_id, 
