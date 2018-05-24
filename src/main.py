@@ -9,8 +9,7 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'article_ieee'
-conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=DB_NAME)
+DB_NAME = 'article550'
 modelname = 'w2v_model/article_ieee.w2v'
 output_folder = 'output_' + DB_NAME + '/'
 os.makedirs(os.path.dirname(output_folder), exist_ok=True)
@@ -20,6 +19,7 @@ os.makedirs(os.path.dirname(output_folder_artdumps), exist_ok=True)
 ARTICLE = output_folder + "article_dump.pkl"
 #CLUSTERING OUTPUT
 SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
+AVG_SILH_ORI = output_folder + "cluster_averagesilh_ori.csv"
 CLUSTER_ORI = output_folder + "cluster_ori.csv"
 CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
 ELBOWFILE = output_folder + "elbow_analysis.png"
@@ -49,37 +49,37 @@ max_phrase = 5
 def preprocess() :
     
     #LOAD DATA DIRECTLY FROM DATABASE
-    articles_id, articles_content = collecting_data(conn)
+    articles_id, articles_text = collecting_data(DB_NAME)
     
     #PRE-PROCESS EVERY ARTICLE
-    articles_tokenized = preprocess_articles(articles_content)
+    articles_tokenized = preprocess_articles(articles_text)
 
     #SAVE FILE TO PICKLE PRE-PROCESS
-    save_to_pickle(ARTICLE, articles_id, articles_tokenized)
+    save_to_pickle(ARTICLE, articles_id, articles_tokenized, articles_text)
 
     #return articles_id, articles_content, articles_tokenized
 
 
-def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=False) :
+def clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_text, looping=False) :
     
+    #CLUSTERING
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_ORI,
                                                                 False)
-    store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_values)
-    cluster_tocsv(conn, CLUSTER_ORI)
     
-    #LOAD CLUSTERS FROM DATABASE
-    clust_articles_id, clust_articles_content = collecting_cluster_data(conn)
-    
-    #RE-PRE-PROCESS CLUSTERS ARTICLES CONTENT
-    clust_articles_tokenized = preprocess_clust_articles(clust_articles_content)
-    
+    #POST-PROCESSING CLUSTERING RESULT
+    clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh = \
+        postprocess_clustering(cluster_labels, articles_id, articles_tokenized, articles_text, sample_silhouette_values)
+
+    #STORE CLUSTER RESULT TO CSV
+    cluster_tocsv(CLUSTER_ORI, AVG_SILH_ORI, clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh)
+
     #SAVE FILE TO PICKLE CLUSTERING
     save_to_pickle(CLUST_ARTICLE , clust_articles_id, 
                                    clust_articles_tokenized,
-                                   clust_articles_content,
+                                   clust_articles_text,
                                    centroids,
                                    silhscore_ori)
     
@@ -88,7 +88,7 @@ def clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping=Fals
         fname = output_folder_artdumps + name + '_' + loop_number +'.pkl'
         save_to_pickle(fname , clust_articles_id, 
                                clust_articles_tokenized,
-                               clust_articles_content,
+                               clust_articles_text,
                                centroids,
                                silhscore_ori)
 
@@ -188,7 +188,7 @@ def main(n_clusters=17, looping=False) :
     preprocess()
     #LOAD PICKLE FROM PREPROCESS
     unpack = load_from_pickle(ARTICLE)
-    articles_id, articles_tokenized = unpack[0], unpack[1]
+    articles_id, articles_tokenized, articles_text = unpack[0], unpack[1], unpack[2]
 
     #LOAD WORD2VEC MODEL
     #train_word2vec(articles_tokenized, modelname)   #if this on, then it ends here.
@@ -197,7 +197,7 @@ def main(n_clusters=17, looping=False) :
     #CLUSTERING
     print ("CLUSTERING")
     #elbow_analysis(articles_tokenized,w2v_model,ELBOWFILE)     #if this on, then it ends here.
-    clustering(w2v_model,articles_id,articles_tokenized,n_clusters, looping)
+    clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_text, looping)
     
     #LOAD PICKLE FROM CLUSTERING
     unpack = load_from_pickle(CLUST_ARTICLE)
@@ -315,5 +315,3 @@ if __name__ == "__main__" :
     main()
     #CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P5.pkl'
     #main_graphtrap(CLUSTER_GRAPH, 9,11)
-
-    conn.close()

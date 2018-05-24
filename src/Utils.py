@@ -3,9 +3,15 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.corpus import stopwords
 from tqdm import tqdm
+import mysql.connector
 import pickle
 import re
 import os
+
+def connectdb(db_name) :
+    conn = mysql.connector.connect(user='root', password='admin', host='127.0.0.1', database=db_name)
+    return conn 
+
 
 def preprocess_text(text) :
     """Clean the text. It remove non-letter,
@@ -33,6 +39,7 @@ def preprocess_text(text) :
     
     #join the cleaned words
     return (" ".join(words_preprocessed))
+
 
 def preprocess_text_experimental(text) :
     """Clean the text. It remove non-letter,

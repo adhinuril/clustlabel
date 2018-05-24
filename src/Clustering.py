@@ -13,56 +13,34 @@ import matplotlib.cm as cm
 import pandas as pd
 from Utils import *
 
-def fetch_data(curA, text='all') :
-    """Fetching scientific article from database 
-    based on publication venue name.
-
-    Parameter
-    curA : MySql Connector Cursor
-        Database Connection Cursor instance.
-    text : string
-        The name of publication venue.
-
-    Return
-    articles : list
-        The list of title + abstratcs.
-    articles_id : list
-        The list of article_id
-    """
-    articles = []
-    articles_id = []
-
-    if (text == 'all') :
-        select_article = ("SELECT article_id, article_title, article_abstract FROM fg_m_article " \
-            +"WHERE article_abstract != '' ORDER BY article_id")
-        curA.execute(select_article)
-    else :
-        select_m_article = ("SELECT article_id, article_title, article_abstract FROM fg_m_article where " \
-            +"article_publicationvenuetext=%s ORDER BY article_id")
-        curA.execute(select_article, (text,))
-    
-    for (article_id, article_title, article_abstract) in curA :
-        articles.append(article_title + " " + article_abstract)
-        articles_id.append(article_id)
-    
-    return articles_id, articles
-
-def collecting_data(conn, text='all') :
+def collecting_data(db_name) :
     '''Loading raw article text from the database.
 
     Return
     articles_id : list
         List of articles id
-    articles : list
+    articles_text : list
         List of articles raw text
     '''
 
     logging.info("Loading Articles Data from database [START]")
-    curA = conn.cursor(buffered=True)
-    articles_id, articles = fetch_data(curA, text)
+    articles_text = []
+    articles_id = []
+
+    query = ("SELECT article_id, article_title, article_abstract FROM fg_m_article " \
+            +"WHERE article_abstract != '' ORDER BY article_id")
+
+    conn = connectdb(db_name)
+    c = conn.cursor(buffered=True)
+    c.execute(query)
+
+    for (article_id, article_title, article_abstract) in c :
+        articles_text.append(article_title + " : " + article_abstract)
+        articles_id.append(article_id)
     
+    conn.close()
     logging.info("Loading Articles Data from database [DONE]")
-    return articles_id, articles
+    return articles_id, articles_text
 
 def train_word2vec(articles_tokenized, modelname="trained_model.w2v") :
     w2v_model = models.Word2Vec(articles_tokenized, min_count=1)
@@ -232,31 +210,45 @@ def store_cluster_label(conn, articles_id, cluster_labels, sample_silhouette_val
     conn.commit()
     #logging.info('Storing cluster Label to Database [DONE]')  
 
-def cluster_tocsv(conn, csvfile_name) :
+def cluster_tocsv(csvfile_name, csvfile_name2,
+                  clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh) :
+    n_cluster = len(clust_articles_id)
+    
     #open csv file
     csvfile = open(csvfile_name,'w',newline='')
-    csvwriter = csv.writer(csvfile, delimiter=';')
+    csvwriter = csv.writer(csvfile, delimiter=';')                        
 
-    #open database connection
-    curA = conn.cursor(buffered=True)
-
-    #data query-ing
-    select_article = ("select a.article_id, c.cluster_id, c.silh_score, a.article_title, a.article_abstract " \
-                        + "from fg_m_article as a, cluster_label as c " \
-                        + "where c.article_id = a.article_id " \
-                        + "order by c.article_id")
-    curA.execute(select_article)                        
+    #avg silh score writting
+    avg = lambda x : sum(x) / len(x)
+    clust_articles_avgsilh = [avg(i) for i in clust_articles_silh]
 
     #data writing to csv
-    csvwriter.writerow(["Article ID","Cluster ID","Silhouette","Title","Abstract"])
-    for row in curA :
-        try :
-            csvwriter.writerow(row)
-        except UnicodeEncodeError :
-            csvwriter.writerow([row[0],row[1], row[2], row[3].encode('utf-8'),row[4].encode('utf-8')])
+    csvwriter.writerow(['Cluster ID','ID','Title','Abstract','Silhouette'])
+    for clust_id in range(n_cluster) :
+        n_data = len(clust_articles_id[clust_id])
+        for data_id in range(n_data) :
+            art_id = clust_articles_id[clust_id][data_id]
+            art_text = clust_articles_text[clust_id][data_id].split(' : ')
+            art_title = art_text[0]
+            art_abstract = ' '.join(art_text[1:len(art_text)])
+            art_silh = clust_articles_silh[clust_id][data_id]
+
+            try :
+                csvwriter.writerow([clust_id, art_id, art_title, art_abstract, art_silh])
+            except UnicodeEncodeError :
+                csvwriter.writerow([clust_id, art_id, art_title.encode('utf-8'), art_abstract.encode('utf-8'), art_silh])
 
     #close file and connection
     csvfile.close()
+
+    #writting cluster average
+    csvfile = open(csvfile_name2,'w',newline='')
+    csvwriter = csv.writer(csvfile, delimiter=';')
+    csvwriter.writerow(['Cluster ID','Average Silhouette'])
+    for i in range(n_cluster) :
+        csvwriter.writerow([i, clust_articles_avgsilh[i]])
+    csvfile.close()
+
     #logging.info("Save to csv File : " + csvfile_name + " [DONE]")
 
 def collecting_cluster_data(conn) :
@@ -290,23 +282,38 @@ def collecting_cluster_data(conn) :
     logging.info("Loading Cluster Data from database [DONE]")
     return clust_articles_id, clust_articles_content
 
-def postprocess_clustering(cluster_labels, articles_id, articles_content) :
-    n_clust = max(cluster_labels)
+def postprocess_clustering(cluster_labels, articles_id, articles_tokenized, articles_text, articles_silh) :
+    n_clust = max(cluster_labels) + 1
     clust_articles_id = []
-    clust_articles_content = []
+    clust_articles_tokenized = []
+    clust_articles_text = []
+    clust_articles_silh = []
 
+    #Initialize clusters variables
     for i in range(n_clust) :
         clust_articles_id.append([])
-        clust_articles_content.append([])
+        clust_articles_tokenized.append([])
+        clust_articles_text.append([])
+        clust_articles_silh.append([])
 
+    #Seperate old data into cluster-format variable
     for i in range(len(cluster_labels)) :
-        current_cluster = cluster_labels[i]
+        #Define current cluster index
+        clust_id = cluster_labels[i]
+
+        #Get data from old variable
         art_id = articles_id[i]
-        art_content = articles_content[i]
-        clust_articles_id[current_cluster].append(art_id)
-        clust_articles_content[current_cluster].append(art_content)
+        art_tokenized = articles_tokenized[i]
+        art_text = articles_text[i]
+        art_silh = articles_silh[i]
+
+        #Store data to cluster-format variable
+        clust_articles_id[clust_id].append(art_id)
+        clust_articles_tokenized[clust_id].append(art_tokenized)
+        clust_articles_text[clust_id].append(art_text)
+        clust_articles_silh[clust_id].append(art_silh)
     
-    return clust_articles_id, clust_articles_content
+    return clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh 
 
 if __name__ == "__main__" :
     #do nothing
