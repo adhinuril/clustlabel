@@ -1,4 +1,5 @@
 from pke.unsupervised import TopicalPageRank as keypex
+from pytopicrank import TopicRank
 from tqdm import tqdm
 from Utils import *
 from TopicCoherence import coherence_v
@@ -13,8 +14,8 @@ coherence_loop_output = 'output_' + db_name + '/tcoherence_loop.csv'
 clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
 max_phrase = 5
 
-def extract_keyphrases(extractor) :
-    
+def extract_keyphrases_tr1(fin) :
+    extractor = keypex(input_file=fin)
     # create a TopicRank extractor and set the input language to English (used for
     # the stoplist in the candidate selection method)
     #extractor = TopicRank(input_file=inputfile)
@@ -44,6 +45,16 @@ def extract_keyphrases(extractor) :
     # print the n-highest (10) scored candidates
     return [u for u, v in extractor.get_n_best(n=max_phrase)]
 
+def extract_keyphrases_tr2(fin) :
+    keyphrases = []
+    with open(fin) as f:
+        text = f.read()
+        tr = TopicRank(text.decode('utf-8'))
+        tr.get_top_n(n=max_phrase)
+        keyphrases = tr.get_top_n(n=max_phrase)
+
+    return keyphrases
+
 def natural_keys(text):
     atoi = lambda c : int(c) if c.isdigit() else c
     return [ atoi(c) for c in re.split('(\d+)', text) ]
@@ -61,8 +72,8 @@ def generate_keyphrases_files(inputfolder, outputfile) :
     for fin in tqdm(clust_files, leave=False, desc='Clusters') :
         basename = os.path.splitext(fin)[0]
         clustname = basename.split('/')[1]
-        extractor = keypex(input_file=fin)
-        keyphrases = extract_keyphrases(extractor)
+        keyphrases = extract_keyphrases_tr1(fin)
+        #keyphrases = extract_keyphrases_tr2(fin)
         keyphrases_list.append(keyphrases)
         tc_scores.append(coherence_v(keyphrases))
     
