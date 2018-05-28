@@ -5,6 +5,7 @@ src/documents/*
 src/output/*
 src/output_article600/*
 src/output_article550/*
+src/temp/*
 src/output*/*
 src/Utils.pyc
 *.pyc
