@@ -14,10 +14,14 @@ from Utils import *
 def generate_cluster_graph(clust_words, model) :
     logging.info('Generating Graph....')
     cluster_graph = []
+    cluster_graph_size = []
     for i in tqdm(range(len(clust_words)), leave=False) :
         gr = build_graph(clust_words[i], model)
+        nodes = gr.number_of_nodes()
+        edges = gr.number_of_edges()
         cluster_graph.append(gr)
-    return cluster_graph
+        cluster_graph_size.append((nodes, edges))
+    return cluster_graph, cluster_graph_size
 
 
 def generate_cluster_graph_v2(clust_words, clust_contents) :
@@ -120,27 +124,33 @@ def mcs_distance_score_v2(G1,G2, alpha=0.7) :
     sum_weight = sum(mcs_weights)
 
     dist_score = 1-( alpha*(float(g3_n/n_max)) + (1-alpha)*(float(sum_weight/e_max)) )
-    n_percent = (g3_n / n_max) * 100
-    return dist_score, n_percent
+    mcs_percent = (g3_n / n_max) * 100
+    mcs_size = (g3_n, g3_e)
+    return dist_score, mcs_percent, mcs_size
 
 
-def generate_graphdist_matrix(cluster_graph, graphdistfile, mcspercentfile) :
+def generate_graphdist_matrix(cluster_graph, cluster_graph_size, graphdistfile, mcspercentfile) :
     logging.info("Generating Graph Distance Matrix....")
     n = len(cluster_graph)
     graphdist_matrix = np.zeros((n,n))
     mcspercent_matrix = np.zeros((n,n))
+    mcssize_matrix = np.empty((n,n), object)
+    for i in range(n) :
+        mcssize_matrix[i][i] = (0,0)
 
     graphdistances = []
 
     for i in tqdm(range(n-1), leave=False, desc='Graph source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Graph target') :
             #dist = mcs_distance_score(cluster_graph[i], cluster_graph[j])
-            dist, n_percent = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
+            dist, mcs_percent, mcs_size = mcs_distance_score_v2(cluster_graph[i], cluster_graph[j])
             graphdistances.append(dist)
             graphdist_matrix[i][j] = dist
             graphdist_matrix[j][i] = dist
-            mcspercent_matrix[i][j] = n_percent
-            mcspercent_matrix[j][i] = n_percent
+            mcspercent_matrix[i][j] = mcs_percent
+            mcspercent_matrix[j][i] = mcs_percent
+            mcssize_matrix[i][j] = mcs_size
+            mcssize_matrix[j][i] = mcs_size
 
     mean_dist = np.mean(graphdistances)
     std_dist = np.std(graphdistances)
@@ -148,8 +158,8 @@ def generate_graphdist_matrix(cluster_graph, graphdistfile, mcspercentfile) :
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
     #adapt_threshold = round(adapt_threshold,2)
 
-    output_distmatrix_csv(graphdist_matrix, mcspercent_matrix, graphdistfile)
-    save_to_pickle(mcspercentfile, mcspercent_matrix)
+    output_distmatrix_csv(graphdist_matrix, mcspercent_matrix, mcssize_matrix, cluster_graph_size, graphdistfile)
+    save_to_pickle(mcspercentfile, mcspercent_matrix, mcssize_matrix, cluster_graph_size)
 
     return graphdist_matrix, adapt_threshold 
 
@@ -286,7 +296,7 @@ def output_cluster_mapping(merged_cluster, clustmapfile) :
     return new_n_clust
 
 
-def output_distmatrix_csv(distmatrix, mcspmatrix, distfile) :
+def output_distmatrix_csv(distmatrix, mcspmatrix, mcssmatrix, cluster_graph_size, distfile) :
     shape = distmatrix.shape[0]
 
     with open(distfile, 'w', newline='') as csvfile :
@@ -314,4 +324,23 @@ def output_distmatrix_csv(distmatrix, mcspmatrix, distfile) :
             row = [str(i+1)]
             row.extend([percent for percent in mcspmatrix[i]])
             csvwriter.writerow(row)
+        
+        csvwriter.writerow([''])
+        csvwriter.writerow([''])
+
+        #WRITING MCS SIZE MATRIX
+        toprow = ['']
+        toprow.extend([str(i+1) for i in range(shape)])
+        csvwriter.writerow(toprow)
+
+        for i in range(shape) :
+            row = [str(i+1)]
+            row.extend([size_tuple for size_tuple in mcssmatrix[i]])
+            row.extend(['', cluster_graph_size[i]])
+            csvwriter.writerow(row)
+        
+        csvwriter.writerow([''])
+        botrow = ['']
+        botrow.extend([i for i in cluster_graph_size])
+        csvwriter.writerow(botrow)
 
