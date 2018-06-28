@@ -1,5 +1,5 @@
 from pke.unsupervised import TopicalPageRank as keypex
-from pytopicrank import TopicRank
+#rom pytopicrank import TopicRank
 from tqdm import tqdm
 from Utils import *
 from TopicCoherence import coherence_v
@@ -8,7 +8,7 @@ import re
 import os
 
 #GLOBAL
-db_name = 'article_ieee'
+db_name = 'article550'
 input_folder = 'output_' + db_name + '/article_dumps/'
 coherence_loop_output = 'output_' + db_name + '/tcoherence_loop.csv'
 clustermapfile = 'output_' + db_name + '/cluster_mapping.csv'
@@ -45,6 +45,7 @@ def extract_keyphrases_tr1(fin) :
     # print the n-highest (10) scored candidates
     return [u for u, v in extractor.get_n_best(n=max_phrase)]
 
+'''
 def extract_keyphrases_tr2(fin) :
     keyphrases = []
     with open(fin) as f:
@@ -54,6 +55,7 @@ def extract_keyphrases_tr2(fin) :
         keyphrases = tr.get_top_n(n=max_phrase)
 
     return keyphrases
+'''
 
 def natural_keys(text):
     atoi = lambda c : int(c) if c.isdigit() else c
