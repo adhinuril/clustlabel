@@ -5,8 +5,9 @@ import mysql.connector
 from gensim import models
 import numpy as np
 import scipy as sp
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN, Birch, MeanShift, estimate_bandwidth
 from sklearn.metrics import silhouette_samples, silhouette_score
+from sklearn.feature_extraction.text import TfidfVectorizer
 import csv
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -68,8 +69,8 @@ def calculate_silhouette(article_matrix, cluster_labels) :
     sample_silhouette_values = silhouette_samples(article_matrix, cluster_labels)
     return silhouette_avg, sample_silhouette_values
 
-def elbow_analysis(articles_tokenized, w2v_model, elbowfile, n_max=30) :
-    logging.info("Elbow Analysis Commencing...")
+def silh_analysis(articles_tokenized, w2v_model, silhfile, silhcsv, n_max=30) :
+    logging.info("Silhouette Analysis Commencing...")
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
     cluster_range = range( 2, n_max )
     silh_scores = []
@@ -88,32 +89,43 @@ def elbow_analysis(articles_tokenized, w2v_model, elbowfile, n_max=30) :
     #Find the largest silhouette score
     max_silh = silh_scores[0]
     max_silh_idx = 0
-    print(silh_scores)
+    #print(silh_scores)
     for i in range(len(cluster_range)) :
         if silh_scores[i] > max_silh :
             max_silh = silh_scores[i]
             max_silh_idx = cluster_range[i] 
 
-    clusters_df = pd.DataFrame( { "num_clusters":cluster_range, "cluster_errors": cluster_errors } )
-    plt.title('Elbow Analysis (Optimal = ' + str(max_silh_idx) + ')')
-    plt.xlabel('k-Clusters')
-    plt.ylabel('Clustering Errors')
+    #clusters_df = pd.DataFrame( { "num_clusters":cluster_range, "cluster_errors": cluster_errors } )
+    clusters_df = pd.DataFrame( { "num_clusters":cluster_range, "silh_scores": silh_scores } )
     plt.figure(figsize=(12,6))
     plt.xticks(clusters_df.num_clusters)
-    plt.plot( clusters_df.num_clusters, clusters_df.cluster_errors, marker = "o" )
-    plt.savefig(elbowfile)
+    plt.plot( clusters_df.num_clusters, clusters_df.silh_scores, marker = "o" )
+    plt.title('Analisis Silhouette (Optimal = ' + str(max_silh_idx) + ')')
+    plt.xlabel('Jumlah Klaster')
+    plt.ylabel('Rata - Rata Silhouette')
+    plt.savefig(silhfile)
     logging.info('Optimal k = ' + str(max_silh_idx) + ', score = ' + str(max_silh))
+
+    #output to csv
+    with open(silhcsv,'w',newline='') as f :
+        writer = csv.writer(f, delimiter=';')
+        writer.writerow(['Jumlah Klaster','Rata-Rata Silhouette'])
+        for i in range(len(cluster_range)) :
+            writer.writerow([cluster_range[i],silh_scores[i]])
+
+    #return max_silh_idx
     raise SystemExit
 
 def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
     
     #Konstruksi matriks article-word2vec_mean
+    #Konstruksi matris docs-features
     logging.info("Clustering [START]")
     logging.info("Preparing data for Clustering....")
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
 
     #Kmeans clustering & silhouette score
-    logging.info("Start Clustering....")
+    logging.info("Start Clustering KMeans....")
     km = KMeans(n_clusters=n_clusters, init='k-means++', max_iter=100, n_init=1,
                     verbose=False) #Print progress reports inside k-means algorithm
     idx = km.fit(article_matrix)
@@ -133,6 +145,116 @@ def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, p
         silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
 
     return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
+
+
+def cluster_dbscan(w2v_model, articles_tokenized, silhscorefile, plot=False) :
+    
+    #Konstruksi matriks article-word2vec_mean
+    #Konstruksi matris docs-features
+    logging.info("Clustering [START]")
+    logging.info("Preparing data for Clustering....")
+    article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
+    print('article matrix :')
+    print(article_matrix[0])
+    '''
+    logging.info("Clustering [START]")
+    logging.info("Preparing data for Clustering....")
+    articles_doc = [" ".join(x) for x in articles_tokenized]
+    
+    #matrix tfidf construction
+    tfidf_vectorizer = TfidfVectorizer()
+    article_matrix = tfidf_vectorizer.fit_transform(articles_doc)
+    print('article matrix :')
+    print(article_matrix[0])
+    '''
+    #Clustering & silhouette score
+    logging.info("Start Clustering DBSCAN....")
+    dbs = DBSCAN(eps=0.8 ,min_samples=3, metric='euclidean')
+    idx = dbs.fit(article_matrix)
+    cluster_labels = dbs.labels_.tolist()
+    cluster_centers = dbs.components_
+    n_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+    #print('nclust : ', n_clusters)
+    #print('labels : ', cluster_labels)
+    logging.info("Clustering [DONE]")
+
+    #output
+    silhouette_avg, sample_silhouette_values = calculate_silhouette(article_matrix,cluster_labels)
+    silhouette_avg = round(silhouette_avg, 4)
+    logging.info("For n_clusters = " + str(n_clusters) + \
+              " The average silhouette_score is :" + str(silhouette_avg))
+    with open(silhscorefile, 'w') as f :
+        f.write('Original silhouette score : ' + str(silhouette_avg))
+    if (plot) :
+        dim_matrix = article_matrix.shape
+        silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
+
+    return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
+
+
+def cluster_birch(w2v_model, articles_tokenized, silhscorefile, plot=False) :
+    
+    #Konstruksi matriks article-word2vec_mean
+    #Konstruksi matris docs-features
+    logging.info("Clustering [START]")
+    logging.info("Preparing data for Clustering....")
+    article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
+
+    #Kmeans clustering & silhouette score
+    logging.info("Start Clustering Birch....")
+    brc = Birch()
+    idx = brc.fit(article_matrix)
+    cluster_labels = brc.labels_
+    cluster_centers = brc.subcluster_centers_
+    n_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+    logging.info("Clustering [DONE]")
+
+    #output
+    silhouette_avg, sample_silhouette_values = calculate_silhouette(article_matrix,cluster_labels)
+    silhouette_avg = round(silhouette_avg, 4)
+    logging.info("For n_clusters = " + str(n_clusters) + \
+              " The average silhouette_score is :" + str(silhouette_avg))
+    with open(silhscorefile, 'w') as f :
+        f.write('Original silhouette score : ' + str(silhouette_avg))
+    if (plot) :
+        dim_matrix = article_matrix.shape
+        silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
+
+    return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
+
+
+def cluster_meanshift(w2v_model, articles_tokenized, silhscorefile, plot=False) :
+    
+    #Konstruksi matriks article-word2vec_mean
+    #Konstruksi matris docs-features
+    logging.info("Clustering [START]")
+    logging.info("Preparing data for Clustering....")
+    article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
+
+    #Kmeans clustering & silhouette score
+    logging.info("Start Clustering MeanShift....")
+    bandwidth = estimate_bandwidth(article_matrix)
+    ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    ms.fit(article_matrix)
+    cluster_labels = ms.labels_
+    cluster_centers = ms.cluster_centers_
+    labels_unique = np.unique(cluster_labels)
+    n_clusters = len(labels_unique)
+    logging.info("Clustering [DONE]")
+
+    #output
+    silhouette_avg, sample_silhouette_values = calculate_silhouette(article_matrix,cluster_labels)
+    silhouette_avg = round(silhouette_avg, 4)
+    logging.info("For n_clusters = " + str(n_clusters) + \
+              " The average silhouette_score is :" + str(silhouette_avg))
+    with open(silhscorefile, 'w') as f :
+        f.write('Original silhouette score : ' + str(silhouette_avg))
+    if (plot) :
+        dim_matrix = article_matrix.shape
+        silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
+
+    return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
+
 
 def cluster_tfidf(articles_tokenized, n_clusters) :
     logging.info("Preparing data for Clustering....")
@@ -283,7 +405,7 @@ def collecting_cluster_data(conn) :
     return clust_articles_id, clust_articles_content
 
 def postprocess_clustering(cluster_labels, articles_id, articles_tokenized, articles_text, articles_silh) :
-    n_clust = max(cluster_labels) + 1
+    n_clust = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
     clust_articles_id = []
     clust_articles_tokenized = []
     clust_articles_text = []
@@ -300,6 +422,10 @@ def postprocess_clustering(cluster_labels, articles_id, articles_tokenized, arti
     for i in range(len(cluster_labels)) :
         #Define current cluster index
         clust_id = cluster_labels[i]
+        
+        #Anticipate noisy data on DBSCAN clustering
+        if (clust_id == -1) :
+            continue
 
         #Get data from old variable
         art_id = articles_id[i]

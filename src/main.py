@@ -9,7 +9,7 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'article550'
+DB_NAME = 'article_ieee_cut'
 modelname = 'w2v_model/article_ieee.w2v'
 output_folder = 'output_' + DB_NAME + '/'
 os.makedirs(os.path.dirname(output_folder), exist_ok=True)
@@ -22,7 +22,8 @@ SILHSCORE_ORI = output_folder + "silhscore_ori.txt"
 AVG_SILH_ORI = output_folder + "cluster_averagesilh_ori.csv"
 CLUSTER_ORI = output_folder + "cluster_ori.csv"
 CLUST_ARTICLE = output_folder + "clust_article_dump.pkl"
-ELBOWFILE = output_folder + "elbow_analysis.png"
+SILHFILE = output_folder + "silhouette_analysis.png"
+SILH_CSV = output_folder + "silhouette_analysis.csv"
 #HIERARCHICAL CLUSTER MERGING OUTPUT
 DIST_MATRIX = output_folder + "dist_matrix.csv"
 MERGED_CLUSTER = output_folder + "merged_cluster.pkl"
@@ -63,12 +64,20 @@ def preprocess() :
 def clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_text, looping=False) :
     
     #CLUSTERING
+    #'''
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_word2vec(w2v_model,
                                                                 articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_ORI,
                                                                 False)
-    
+    #'''                                                                
+    '''
+    cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_birch(w2v_model,
+                                                                articles_tokenized,
+                                                                SILHSCORE_ORI,
+                                                                False)
+    #'''
+
     #POST-PROCESSING CLUSTERING RESULT
     clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh = \
         postprocess_clustering(cluster_labels, articles_id, articles_tokenized, articles_text, sample_silhouette_values)
@@ -97,10 +106,10 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
                  clust_articles_tokenized, clust_articles_content, centroids, looping=False) :
     
     #GENERATE GRAPH MATRIX
-    cluster_graph = generate_cluster_graph(clust_words, w2v_model)
+    cluster_graph, cluster_graph_size = generate_cluster_graph(clust_words, w2v_model)
 
     #GENERATE GRAPH DISTANCE MATRIX
-    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, DIST_MATRIX, MCSPERCENT_MATRIX)
+    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, cluster_graph_size, DIST_MATRIX, MCSPERCENT_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
     
     save_to_pickle(CLUSTER_GRAPH, cluster_graph, dist_matrix)
@@ -179,7 +188,7 @@ def clustlabeling(new_clust_words, new_clust_phrases, new_clust_articles_content
     fout.close()
 
 
-def main(n_clusters=17, looping=False) :
+def main(n_clusters=11, looping=False) :
 
     print ("START")
 
@@ -196,14 +205,15 @@ def main(n_clusters=17, looping=False) :
     
     #CLUSTERING
     print ("CLUSTERING")
-    #elbow_analysis(articles_tokenized,w2v_model,ELBOWFILE)     #if this on, then it ends here.
+    max_n_clusters = 30
+    #silh_analysis(articles_tokenized,w2v_model,SILHFILE, SILH_CSV, max_n_clusters)     #if this on, then it ends here.
     clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_text, looping)
     
     #LOAD PICKLE FROM CLUSTERING
     unpack = load_from_pickle(CLUST_ARTICLE)
     clust_articles_id, clust_articles_tokenized, clust_articles_content, centroids, silhscore_ori = \
        unpack[0], unpack[1], unpack[2], unpack[3], unpack[4]
-
+    
     #FREQUENT PHRASE MINING
     print("FREQUENT PHRASE MINING")
     clust_words, clust_phrases = extract_clust_phrases(clust_articles_tokenized, min_count, min_count_phrase)
