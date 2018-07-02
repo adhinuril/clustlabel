@@ -76,7 +76,7 @@ def generate_mcs(G1,G2) :
     for node_i in tqdm(G3, leave=False, desc='MCS edges') :
         neighbours = list(G1.adj[node_i])
         for node_j in neighbours :
-            if (node_i,node_j) in list(G2.edges()) :
+            if G2.has_edge(node_i,node_j) :
                 #print (node_i, '-', node_j)
                 weight_G1 = G1[node_i][node_j]['weight']
                 #weight_G2 = G2[node_i][node_j]['weight']
