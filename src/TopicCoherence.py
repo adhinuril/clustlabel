@@ -11,7 +11,9 @@ def coherence_v(keyphrases) :
     
     top_words = list(set(top_words))
     
-    #top_words = keyphrases
+    #CEK KOHERENSI TOPIK PER FRASE
+    top_words = keyphrases
+    
     #print(top_words)
     #print('n before : ', len(top_words))
     flag = 0
