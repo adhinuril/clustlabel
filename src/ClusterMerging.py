@@ -128,8 +128,17 @@ def mcs_distance_score_v2(G1,G2, alpha=0.7) :
     mcs_size = (g3_n, g3_e)
     return dist_score, mcs_percent, mcs_size
 
+def threshold_std(distances) :
+    mean_dist = np.mean(distances)
+    std_dist = np.std(distances)
+    adapt_threshold = mean_dist - std_dist
+    return adapt_threshold
 
-def generate_graphdist_matrix(cluster_graph, cluster_graph_size, graphdistfile, mcspercentfile) :
+def threshold_percentile(distances, k) :
+    adapt_threshold = np.percentile(distances, k)
+    return adapt_threshold
+
+def generate_graphdist_matrix(cluster_graph, cluster_graph_size, percentile, graphdistfile, mcspercentfile) :
     logging.info("Generating Graph Distance Matrix....")
     n = len(cluster_graph)
     graphdist_matrix = np.zeros((n,n))
@@ -152,9 +161,10 @@ def generate_graphdist_matrix(cluster_graph, cluster_graph_size, graphdistfile, 
             mcssize_matrix[i][j] = mcs_size
             mcssize_matrix[j][i] = mcs_size
 
-    mean_dist = np.mean(graphdistances)
-    std_dist = np.std(graphdistances)
-    adapt_threshold = mean_dist - std_dist
+    #ADAPTIVE THRESHOLD
+    #adapt_threshold = threshold_std(graphdistances)
+    adapt_threshold = threshold_percentile(graphdistances, percentile)
+
     logging.info("Adaptive Threshold = " + str(adapt_threshold))
     #adapt_threshold = round(adapt_threshold,2)
 
@@ -167,18 +177,19 @@ def generate_graphdist_matrix(cluster_graph, cluster_graph_size, graphdistfile, 
 def generate_centroiddist_matrix(centroids, centroiddistfile) :
     logging.info("Generating Centroid Distance Matrix....")
     n = len(centroids)
-    #centroiddist_matrix = np.zeros((n,n))
+
+    #DUMMY PARAMETER UNTUK FUNGSI output_distmatrix_csv()
+    cluster_graph_size = np.zeros(n)
+    mcspercent_matrix = np.zeros((n,n))
+    mcssize_matrix = np.empty((n,n), object)
+    for i in range(n) :
+        mcssize_matrix[i][i] = (0,0)
+    
+    #KONSTRUKSI MATRIX SIMILARITAS KLASTER MENGGUNAKAN CENTROID
     centroiddist_matrix = cosine_distances(centroids)
 
     centroiddistances = []
-    '''
-    for i in tqdm(range(n-1), leave=False, desc='Centroid source') :
-        for j in tqdm(range(i+1,n), leave=False, desc='Centroid target') :
-            dist = cosine_distances(centroids[i], centroids[j])
-            centroiddistances.append(dist)
-            centroiddist_matrix[i][j] = dist
-            centroiddist_matrix[j][i] = dist
-    '''
+    
     for i in tqdm(range(n-1), leave=False, desc='Centroid source') :
         for j in tqdm(range(i+1,n), leave=False, desc='Centroid target') :
             dist = centroiddist_matrix[i][j]
@@ -191,8 +202,8 @@ def generate_centroiddist_matrix(centroids, centroiddistfile) :
     #adapt_threshold = round(adapt_threshold,2)
     #logging.info("Adaptive Threshold (round) = " + str(adapt_threshold))
 
-    with open(centroiddistfile,'w') as out :
-        out.write(str(centroiddist_matrix))
+    output_distmatrix_csv(centroiddist_matrix, mcspercent_matrix, mcssize_matrix, cluster_graph_size, centroiddistfile)
+    #save_to_pickle(mcspercentfile, mcspercent_matrix, mcssize_matrix, cluster_graph_size)
 
     return centroiddist_matrix, adapt_threshold 
     

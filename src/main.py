@@ -77,6 +77,11 @@ def clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_
                                                                 SILHSCORE_ORI,
                                                                 False)
     #'''
+    '''
+    cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_tfidf(articles_tokenized,
+                                                                n_clusters,
+                                                                SILHSCORE_ORI)
+    #'''
 
     #POST-PROCESSING CLUSTERING RESULT
     clust_articles_id, clust_articles_tokenized, clust_articles_text, clust_articles_silh = \
@@ -109,7 +114,8 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
     cluster_graph, cluster_graph_size = generate_cluster_graph(clust_words, w2v_model)
 
     #GENERATE GRAPH DISTANCE MATRIX
-    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, cluster_graph_size, DIST_MATRIX, MCSPERCENT_MATRIX)
+    percentile = 10
+    dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, cluster_graph_size, percentile, DIST_MATRIX, MCSPERCENT_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
     
     save_to_pickle(CLUSTER_GRAPH, cluster_graph, dist_matrix)
@@ -205,7 +211,7 @@ def main(n_clusters=11, looping=False) :
     
     #CLUSTERING
     print ("CLUSTERING")
-    max_n_clusters = 30
+    #max_n_clusters = 30
     #silh_analysis(articles_tokenized,w2v_model,SILHFILE, SILH_CSV, max_n_clusters)     #if this on, then it ends here.
     clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_text, looping)
     

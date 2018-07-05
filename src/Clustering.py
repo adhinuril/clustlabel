@@ -125,7 +125,7 @@ def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, p
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
 
     #Kmeans clustering & silhouette score
-    logging.info("Start Clustering KMeans....")
+    logging.info("Start Clustering KMeans w2v....")
     km = KMeans(n_clusters=n_clusters, init='k-means++', max_iter=100, n_init=1,
                     verbose=False) #Print progress reports inside k-means algorithm
     idx = km.fit(article_matrix)
@@ -256,30 +256,36 @@ def cluster_meanshift(w2v_model, articles_tokenized, silhscorefile, plot=False) 
     return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
 
 
-def cluster_tfidf(articles_tokenized, n_clusters) :
+def cluster_tfidf(articles_tokenized, n_clusters, silhscorefile, plot=False) :
+    logging.info("Clustering [START]")
     logging.info("Preparing data for Clustering....")
     articles_doc = [" ".join(x) for x in articles_tokenized]
     
     #matrix tfidf construction
     tfidf_vectorizer = TfidfVectorizer()
-    matrix_tfidf = tfidf_vectorizer.fit_transform(articles_doc)
+    article_matrix = tfidf_vectorizer.fit_transform(articles_doc)
 
     #clustering
-    logging.info("Start Clustering.....")
-    km = KMeans(n_clusters=n_clusters, init='k-means++', max_iter=100, n_init=1,
+    logging.info("Start Clustering KMeans Tf-IDF.....")
+    km = KMeans(n_clusters=n_clusters, init='k-means++', max_iter=50, n_init=1,
                     verbose=False) #Print progress reports inside k-means algorithm
-    idx = km.fit(matrix_tfidf)
+    idx = km.fit(article_matrix)
     cluster_labels = km.labels_.tolist()
+    cluster_centers = km.cluster_centers_
+    logging.info("Clustering [DONE]")
 
     #output
-    silhouette_avg = silhouette_score(matrix_tfidf,cluster_labels)
-    print("For n_clusters =", n_clusters,
-              "The average silhouette_score is :", "%.4f" % silhouette_avg)
-    sample_silhouette_values = silhouette_samples(matrix_tfidf, cluster_labels)
-    dim_matrix = matrix_tfidf.shape
-    silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
+    silhouette_avg, sample_silhouette_values = calculate_silhouette(article_matrix,cluster_labels)
+    silhouette_avg = round(silhouette_avg, 4)
+    logging.info("For n_clusters = " + str(n_clusters) + \
+              " The average silhouette_score is :" + str(silhouette_avg))
+    with open(silhscorefile, 'w') as f :
+        f.write('Original silhouette score : ' + str(silhouette_avg))
+    if (plot) :
+        dim_matrix = article_matrix.shape
+        silhouette_plot(dim_matrix[0], n_clusters, cluster_labels, sample_silhouette_values, silhouette_avg)
 
-    return cluster_labels, sample_silhouette_values
+    return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
 
 def silhouette_plot(num_docs, n_clusters, clusters_labels, sample_silhouette_values, silhouette_avg):
     y_lower = 10
