@@ -30,6 +30,7 @@ def generate_cluster_graph_v2(clust_words, clust_contents) :
     '''
     logging.info('Generating Graph....')
     cluster_graph = []
+    cluster_graph_size = []
     for i in tqdm(range(len(clust_words)), leave=False) :
         contents = clust_contents[i]
         #MERGE ALL CONTENTS IN A CLUSTER
@@ -38,8 +39,11 @@ def generate_cluster_graph_v2(clust_words, clust_contents) :
         sentences = extract_sentences(all_contents)
         win = 2
         gr = build_graph_cooccurence(clust_words[i], sentences, win)
+        nodes = gr.number_of_nodes()
+        edges = gr.number_of_edges()
         cluster_graph.append(gr)
-    return cluster_graph
+        cluster_graph_size.append((nodes, edges))
+    return cluster_graph, cluster_graph_size
 
 
 def graph_to_csv(G, nfilename, efilename) :

@@ -164,10 +164,10 @@ def build_graph_cooccurence(nodes, sentences, win) :
                     neighword = sen_split[neighword_index]
                     #if neighword not in nodes : #check if the sentence neighbour word is part of the nodes
                     #    continue
-                    if (word,neighword) not in list(Gtext.edges()) :
-                        Gtext.add_edge(word, neighword, weight=0.0)
-                    #count matrix increment, for un-directed graph
-                    Gtext[word][neighword]['weight'] += 1.0
+                    if Gtext.has_node(word) and Gtext.has_node(neighword) :
+                        if not Gtext.has_edge(word, neighword) :
+                            Gtext.add_edge(word, neighword, weight=0.0)
+                        Gtext[word][neighword]['weight'] += 1.0
 
     return Gtext
 

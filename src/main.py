@@ -9,8 +9,8 @@ import os
 import csv
 
 #PREPARE THE OUTPUT
-DB_NAME = 'article_ieee_cut'
-modelname = 'w2v_model/article_ieee.w2v'
+DB_NAME = 'article550'
+modelname = 'w2v_model/all_articles.w2v'
 output_folder = 'output_' + DB_NAME + '/'
 os.makedirs(os.path.dirname(output_folder), exist_ok=True)
 output_folder_artdumps = 'output_' + DB_NAME + '/article_dumps/'
@@ -74,6 +74,7 @@ def clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_
     '''
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_birch(w2v_model,
                                                                 articles_tokenized,
+                                                                n_clusters,
                                                                 SILHSCORE_ORI,
                                                                 False)
     #'''
@@ -81,6 +82,13 @@ def clustering(w2v_model, n_clusters, articles_id, articles_tokenized, articles_
     cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_tfidf(articles_tokenized,
                                                                 n_clusters,
                                                                 SILHSCORE_ORI)
+    #'''
+    '''
+    cluster_labels, centroids, silhscore_ori ,sample_silhouette_values = cluster_spectral(w2v_model,
+                                                                articles_tokenized,
+                                                                n_clusters,
+                                                                SILHSCORE_ORI,
+                                                                False)
     #'''
 
     #POST-PROCESSING CLUSTERING RESULT
@@ -111,10 +119,11 @@ def clustmerging(w2v_model, clust_words, clust_phrases, clust_articles_id,
                  clust_articles_tokenized, clust_articles_content, centroids, looping=False) :
     
     #GENERATE GRAPH MATRIX
-    cluster_graph, cluster_graph_size = generate_cluster_graph(clust_words, w2v_model)
+    #cluster_graph, cluster_graph_size = generate_cluster_graph(clust_words, w2v_model) #Word2Vec
+    cluster_graph, cluster_graph_size = generate_cluster_graph_v2(clust_words, clust_articles_content) #Co-Occurence
 
     #GENERATE GRAPH DISTANCE MATRIX
-    percentile = 10
+    percentile = 5
     dist_matrix, adapt_threshold = generate_graphdist_matrix(cluster_graph, cluster_graph_size, percentile, DIST_MATRIX, MCSPERCENT_MATRIX)
     #dist_matrix, adapt_threshold = generate_centroiddist_matrix(centroids, DIST_MATRIX)
     
@@ -329,5 +338,5 @@ def main_graphtrap(clustgraph, idxa, idxb) :
 if __name__ == "__main__" :
     #main_n()
     main()
-    #CLUSTER_GRAPH = output_folder + 'cluster_graph_ori_P5.pkl'
-    #main_graphtrap(CLUSTER_GRAPH, 9,11)
+    #CLUSTER_GRAPH = output_folder + 'cluster_graph_ori.pkl'
+    #main_graphtrap(CLUSTER_GRAPH, 2,11)

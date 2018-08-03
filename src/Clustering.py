@@ -5,7 +5,7 @@ import mysql.connector
 from gensim import models
 import numpy as np
 import scipy as sp
-from sklearn.cluster import KMeans, DBSCAN, Birch, MeanShift, estimate_bandwidth
+from sklearn.cluster import KMeans, DBSCAN, Birch, MeanShift, estimate_bandwidth, SpectralClustering
 from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 import csv
@@ -69,6 +69,7 @@ def calculate_silhouette(article_matrix, cluster_labels) :
     sample_silhouette_values = silhouette_samples(article_matrix, cluster_labels)
     return silhouette_avg, sample_silhouette_values
 
+
 def silh_analysis(articles_tokenized, w2v_model, silhfile, silhcsv, n_max=30) :
     logging.info("Silhouette Analysis Commencing...")
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
@@ -115,6 +116,7 @@ def silh_analysis(articles_tokenized, w2v_model, silhfile, silhcsv, n_max=30) :
 
     #return max_silh_idx
     raise SystemExit
+
 
 def cluster_word2vec(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
     
@@ -192,7 +194,7 @@ def cluster_dbscan(w2v_model, articles_tokenized, silhscorefile, plot=False) :
     return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
 
 
-def cluster_birch(w2v_model, articles_tokenized, silhscorefile, plot=False) :
+def cluster_birch(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
     
     #Konstruksi matriks article-word2vec_mean
     #Konstruksi matris docs-features
@@ -202,7 +204,7 @@ def cluster_birch(w2v_model, articles_tokenized, silhscorefile, plot=False) :
 
     #Kmeans clustering & silhouette score
     logging.info("Start Clustering Birch....")
-    brc = Birch()
+    brc = Birch(n_clusters=n_clusters)
     idx = brc.fit(article_matrix)
     cluster_labels = brc.labels_
     cluster_centers = brc.subcluster_centers_
@@ -223,7 +225,7 @@ def cluster_birch(w2v_model, articles_tokenized, silhscorefile, plot=False) :
     return cluster_labels, cluster_centers, silhouette_avg, sample_silhouette_values
 
 
-def cluster_meanshift(w2v_model, articles_tokenized, silhscorefile, plot=False) :
+def cluster_spectral(w2v_model, articles_tokenized, n_clusters, silhscorefile, plot=False) :
     
     #Konstruksi matriks article-word2vec_mean
     #Konstruksi matris docs-features
@@ -232,14 +234,13 @@ def cluster_meanshift(w2v_model, articles_tokenized, silhscorefile, plot=False) 
     article_matrix = generate_article_matrix(articles_tokenized, w2v_model)
 
     #Kmeans clustering & silhouette score
-    logging.info("Start Clustering MeanShift....")
+    logging.info("Start Clustering SpectralClustering....")
     bandwidth = estimate_bandwidth(article_matrix)
-    ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
-    ms.fit(article_matrix)
-    cluster_labels = ms.labels_
-    cluster_centers = ms.cluster_centers_
+    sc = SpectralClustering(n_clusters=n_clusters)
+    sc.fit(article_matrix)
+    cluster_labels = sc.labels_
+    cluster_centers = []
     labels_unique = np.unique(cluster_labels)
-    n_clusters = len(labels_unique)
     logging.info("Clustering [DONE]")
 
     #output
